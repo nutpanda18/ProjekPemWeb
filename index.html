@@ -1,11 +1,3 @@
-<?php
-session_start();
-// If a user is already logged in, skip the landing page and go to Home
-if (isset($_SESSION['isLoggedIn'])) {
-    header("Location: Home.php");
-    exit();
-}
-?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
