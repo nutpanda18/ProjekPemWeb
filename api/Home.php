@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['isLoggedIn'])) { header("Location: index.php"); exit(); }
+if (!isset($_SESSION['isLoggedIn'])) { header("Location: index.html"); exit(); }
 
 if ($_SESSION['role'] === 'admin') {
     header("Location: dashboard_admin.php");
