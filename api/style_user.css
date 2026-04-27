@@ -1,0 +1,69 @@
+/* General Layout */
+body {
+    background-color: #fffaf5;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom Cards */
+.glass-card {
+    background: white;
+    border-radius: 2.5rem;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    border: 1px solid #fff7ed;
+}
+
+
+.stat-orange {
+    background: linear-gradient(to bottom right, #f26a1d, #ff8c42);
+    width: 14rem;
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    color: white;
+    box-shadow: 0 10px 15px -3px rgba(242, 106, 29, 0.3);
+}
+
+
+.report-table-container {
+    background: white;
+    border-radius: 2rem;
+    overflow: hidden;
+    border: 1px solid #fff7ed;
+}
+
+.table-head {
+    background-color: #5c3d2e;
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Form Styling */
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #f9fafb;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    outline: none;
+    border: 1px solid transparent;
+}
+
+.form-input:focus {
+    border-color: #f26a1d;
+}
+
+.submit-btn {
+    width: 100%;
+    background-color: #f26a1d;
+    color: white;
+    padding: 1rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+.submit-btn:hover {
+    background-color: #c2410c;
+}

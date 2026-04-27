@@ -1,0 +1,56 @@
+<?php
+session_start();
+// If a user is already logged in, skip the landing page and go to Home
+if (isset($_SESSION['isLoggedIn'])) {
+    header("Location: Home.php");
+    exit();
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selamat Datang - Suara Wisata Madiun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style_landing.css">
+</head>
+<body class="bg-[#fffaf5]">
+
+    <nav class="container mx-auto px-6 py-8 flex justify-between items-center">
+        <div class="text-2xl font-black text-[#4a2c1d]">🍂 Laporan Keluhan Wisata Madiun</div>
+        <div class="space-x-4">
+            <a href="Login.php" class="text-sm font-bold text-[#4a2c1d] hover:underline">Masuk</a>
+            <a href="Login.php?action=register" class="bg-[#f26a1d] text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-orange-200">Daftar</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 py-16 flex flex-col lg:flex-row items-center gap-12">
+        <div class="lg:w-1/2 space-y-8 text-left">
+            <div class="inline-block bg-orange-100 text-[#f26a1d] px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest">
+                Layanan Pengaduan Wisata
+            </div>
+            <h1 class="text-5xl lg:text-7xl font-black text-[#4a2c1d] leading-tight">
+                Suarakan Keluhan Anda Untuk <span class="text-[#f26a1d]">Madiun Lebih Baik.</span>
+            </h1>
+            <p class="text-stone-500 text-lg leading-relaxed max-w-lg">
+                Bantu kami meningkatkan kualitas destinasi wisata di Kota Madiun. Laporkan fasilitas rusak atau masalah kebersihan secara langsung.
+            </p>
+            <div class="flex gap-4">
+                <a href="Login.php?action=register" class="bg-[#f26a1d] text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-orange-200 hover:scale-105 transition transform">
+                    Mulai Melapor 🚀
+                </a>
+                <a href="Tentang.php" class="bg-white border border-stone-200 text-stone-600 px-8 py-4 rounded-2xl font-bold hover:bg-stone-50 transition">
+                    Tentang Kami
+                </a>
+            </div>
+        </div>
+
+        <div class="lg:w-1/2 relative">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEglH_LrPTv7P6DEiTEdVDeCExXo94v9B4cTZ2LFitQxKjGVjXjOc33qeGNiYJ1mLRB4--J5cU12o4dP-l-cAS1nf-ezu8Sw5Le-7PkLTgEhOkmz5EMnitwQK0aIoHIU_-H0v0y43pQ-FW6b4G4hgxmV9IKaxR-rbAmjJWUMNBR5X7ZmPEDGRh6RIHKqpg/w640-h323-rw/Go%20Madiun%20Sumber%20Umis.jpg" 
+                 alt="Madiun" 
+                 class="relative z-10 w-full h-[450px] object-cover rounded-[3rem] shadow-2xl border-8 border-white">
+        </div>
+    </main>
+</body>
+</html>
