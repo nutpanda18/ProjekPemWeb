@@ -4,9 +4,6 @@
     "*.php": { "runtime": "vercel-php@0.7.5" }
   },
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
