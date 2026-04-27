@@ -12,54 +12,68 @@ if (isset($_GET['logout'])) {
 
 $error_message = "";
 
+// Check if form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action']; 
     
+    // 1. REGISTER LOGIC
     if ($action === 'register') {
-        $username = mysqli_real_escape_string($koneksi, $_POST['username']);
-        $email = mysqli_real_escape_string($koneksi, $_POST['email']);
-        $password = mysqli_real_escape_string($koneksi, $_POST['password']);
-
-        // Check if username or email already exists
-        $checkUser = mysqli_query($koneksi, "SELECT * FROM register WHERE username='$username' OR email='$email'");
-        if (mysqli_num_rows($checkUser) > 0) {
-            $error_message = "Username atau Email sudah terdaftar!";
+        if (!$koneksi) {
+            $error_message = "Koneksi database terputus. Gagal mendaftar.";
         } else {
-            $query = "INSERT INTO register (username, email, password, role) VALUES ('$username', '$email', '$password', 'user')";
-            if (mysqli_query($koneksi, $query)) {
-                $_SESSION['isLoggedIn'] = true;
-                $_SESSION['username'] = $username;
-                $_SESSION['role'] = 'user';
-                header("Location: Home.php");
-                exit();
+            $username = mysqli_real_escape_string($koneksi, $_POST['username']);
+            $email = mysqli_real_escape_string($koneksi, $_POST['email']);
+            $password = mysqli_real_escape_string($koneksi, $_POST['password']);
+
+            $checkUser = mysqli_query($koneksi, "SELECT * FROM register WHERE username='$username' OR email='$email'");
+            if (mysqli_num_rows($checkUser) > 0) {
+                $error_message = "Username atau Email sudah terdaftar!";
+            } else {
+                $query = "INSERT INTO register (username, email, password, role) VALUES ('$username', '$email', '$password', 'user')";
+                if (mysqli_query($koneksi, $query)) {
+                    $_SESSION['isLoggedIn'] = true;
+                    $_SESSION['username'] = $username;
+                    $_SESSION['role'] = 'user';
+                    header("Location: Home.php");
+                    exit();
+                }
             }
         }
-    } elseif ($action === 'login') {
-        $user_input = mysqli_real_escape_string($koneksi, $_POST['user_input']);
-        $password = mysqli_real_escape_string($koneksi, $_POST['password']);
+    } 
+    
+    // 2. LOGIN LOGIC
+    else if ($action === 'login') {
+        $user_input = $_POST['user_input'];
+        $password = $_POST['password'];
 
-        // Login using Username OR Email
-        $query = "SELECT * FROM register WHERE (username='$user_input' OR email='$user_input') AND password='$password'";
-        $result = mysqli_query($koneksi, $query);
-        
-        if (mysqli_num_rows($result) > 0) {
-            $user_data = mysqli_fetch_assoc($result);
-            $_SESSION['isLoggedIn'] = true;
-            $_SESSION['username'] = $user_data['username'];
-            $_SESSION['role'] = $user_data['role'];
-
-            // Redirect based on role
-            if ($user_data['role'] === 'admin') {
-                header("Location: dashboard_admin.php");
-            } else {
-                header("Location: Home.php");
-            }
-            exit();
+        if (!$koneksi) {
+            $error_message = "Koneksi database terputus. Gagal masuk.";
         } else {
-            $error_message = "Akun tidak ditemukan atau password salah!";
+            $user_input = mysqli_real_escape_string($koneksi, $user_input);
+            $password = mysqli_real_escape_string($koneksi, $password);
+
+            $query = "SELECT * FROM register WHERE (username='$user_input' OR email='$user_input') AND password='$password'";
+            $result = mysqli_query($koneksi, $query);
+            
+            if (mysqli_num_rows($result) > 0) {
+                $user_data = mysqli_fetch_assoc($result);
+                $_SESSION['isLoggedIn'] = true;
+                $_SESSION['username'] = $user_data['username'];
+                $_SESSION['role'] = $user_data['role'];
+
+                if ($user_data['role'] === 'admin') {
+                    header("Location: dashboard_admin.php");
+                } else {
+                    header("Location: Home.php");
+                }
+                exit();
+            } else {
+                $error_message = "Akun tidak ditemukan atau password salah!";
+            }
         }
     }
 }
+
 $isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true;
 ?>
 
@@ -93,8 +107,14 @@ $isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true
                     <div class="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-full mb-6 text-4xl">👋</div>
                     <h1 class="text-3xl font-black text-stone-900">Halo, <?= htmlspecialchars($_SESSION['username']); ?>!</h1>
                     <div class="mt-10 space-y-3">
-                        <a href="<?= ($_SESSION['role'] == 'admin') ? 'dashboard_admin.php' : 'Home.php'; ?>" class="block w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition text-center">Ke Dashboard</a>
-                        <a href="Login.php?logout=true" class="block w-full bg-stone-100 text-stone-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 transition text-center">Keluar Akun</a>
+                        <a href="<?= ($_SESSION['role'] == 'admin') ? 'dashboard_admin.php' : 'Home.php'; ?>" 
+                           class="block w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition text-center">
+                           Ke Dashboard
+                        </a>
+                        <a href="Login.php?logout=true" 
+                           class="block w-full bg-stone-100 text-stone-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 transition text-center">
+                           Keluar Akun
+                        </a>
                     </div>
                 </div>
 
@@ -135,6 +155,12 @@ $isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true
         function toggleAuth() {
             document.getElementById('loginSection').classList.toggle('hidden');
             document.getElementById('registerSection').classList.toggle('hidden');
+        }
+        
+        // Handle URL parameter to show register automatically if needed
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'register') {
+            toggleAuth();
         }
     </script>
 </body>
