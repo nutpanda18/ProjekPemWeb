@@ -1,12 +1,15 @@
 <?php
 session_start();
+
+// Since Login.php and koneksi.php are in the same 'api' folder
 include 'koneksi.php'; 
 
 // --- LOGOUT LOGIC ---
 if (isset($_GET['logout'])) {
     session_unset();
     session_destroy();
-    header("Location: Login.php"); 
+    // Redirect back to index.php in the root folder
+    header("Location: ../index.php"); 
     exit();
 }
 
@@ -16,11 +19,15 @@ $error_message = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action']; 
     
-    // 1. REGISTER LOGIC
-    if ($action === 'register') {
-        if (!$koneksi) {
-            $error_message = "Koneksi database terputus. Gagal mendaftar.";
-        } else {
+    /**
+     * CONNECTION CHECK: 
+     * Ensures $koneksi exists before calling mysqli functions
+     */
+    if (!isset($koneksi) || !$koneksi) {
+        $error_message = "Koneksi database terputus. Silakan cek file koneksi.php Anda.";
+    } else {
+        // 1. REGISTER LOGIC
+        if ($action === 'register') {
             $username = mysqli_real_escape_string($koneksi, $_POST['username']);
             $email = mysqli_real_escape_string($koneksi, $_POST['email']);
             $password = mysqli_real_escape_string($koneksi, $_POST['password']);
@@ -34,33 +41,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['isLoggedIn'] = true;
                     $_SESSION['username'] = $username;
                     $_SESSION['role'] = 'user';
+                    // Redirect to Home.php in the same 'api' folder
                     header("Location: Home.php");
                     exit();
                 }
             }
-        }
-    } 
-    
-    // 2. LOGIN LOGIC
-    else if ($action === 'login') {
-        $user_input = $_POST['user_input'];
-        $password = $_POST['password'];
-
-        if (!$koneksi) {
-            $error_message = "Koneksi database terputus. Gagal masuk.";
-        } else {
-            $user_input = mysqli_real_escape_string($koneksi, $user_input);
-            $password = mysqli_real_escape_string($koneksi, $password);
+        } 
+        
+        // 2. LOGIN LOGIC
+        else if ($action === 'login') {
+            $user_input = mysqli_real_escape_string($koneksi, $_POST['user_input']);
+            $password = mysqli_real_escape_string($koneksi, $_POST['password']);
 
             $query = "SELECT * FROM register WHERE (username='$user_input' OR email='$user_input') AND password='$password'";
             $result = mysqli_query($koneksi, $query);
             
-            if (mysqli_num_rows($result) > 0) {
+            if ($result && mysqli_num_rows($result) > 0) {
                 $user_data = mysqli_fetch_assoc($result);
                 $_SESSION['isLoggedIn'] = true;
                 $_SESSION['username'] = $user_data['username'];
                 $_SESSION['role'] = $user_data['role'];
 
+                // Redirect to files in the same 'api' folder
                 if ($user_data['role'] === 'admin') {
                     header("Location: dashboard_admin.php");
                 } else {
@@ -157,7 +159,6 @@ $isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true
             document.getElementById('registerSection').classList.toggle('hidden');
         }
         
-        // Handle URL parameter to show register automatically if needed
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'register') {
             toggleAuth();
