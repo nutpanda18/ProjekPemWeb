@@ -82,7 +82,7 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                             <tr class="hover:bg-orange-50/30 transition-colors">
                                 <td class="p-4 w-20">
                                     <?php 
-                                    // Make sure folder name is exactly 'uploads' (no underscore)
+                                    // Make sure folder name is exactly 'uploads' (no underscore) idk
                                     $imagePath = "uploads/" . $row['foto'];
                                     
                                     if(!empty($row['foto']) && file_exists($imagePath)): ?>

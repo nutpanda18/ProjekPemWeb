@@ -12,7 +12,7 @@ function getWisataData() {
 
     if ($response) {
         $data = json_decode($response, true);
-        // BPS API usually stores the table body in this path
+        // BPS API usually stores the table body in this line
         return $data['data']['tbody'] ?? [];
     }
     return [];
