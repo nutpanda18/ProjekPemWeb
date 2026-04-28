@@ -2,7 +2,7 @@
 // TiDB Cloud Configuration
 $host = "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com"; // Get this from TiDB 'Connect' panel
 $user = "4NvsVAGhBM8TkY1.root";               // Your TiDB username usually ends in .root
-$pass = "W0BmG6TkTygW56z9";                    // The password you set in TiDB
+$pass = "7D4rkVEZhlORPphH";                    // The password you set in TiDB
 $db   = "laporankeluhanwisata";             // Your database name
 $port = 4000;                               // TiDB default port
 
