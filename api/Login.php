@@ -9,7 +9,7 @@ if (isset($_GET['logout'])) {
     session_unset();
     session_destroy();
     // Redirect back to index.php in the root folder
-    header("Location: ../index.php"); 
+    header("Location: ../index.html"); 
     exit();
 }
 
