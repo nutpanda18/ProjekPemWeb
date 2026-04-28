@@ -1,20 +1,33 @@
 <?php
-// Database configuration
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "laporankeluhanwisata"; 
+// TiDB Cloud Configuration
+$host = "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com"; // Get this from TiDB 'Connect' panel
+$user = "4NvsVAGhBM8TkY1.root";               // Your TiDB username usually ends in .root
+$pass = "W0BmG6TkTygW56z9";                    // The password you set in TiDB
+$db   = "laporankeluhanwisata";             // Your database name
+$port = 4000;                               // TiDB default port
 
-// Create connection using the variables above
-$koneksi = mysqli_connect($host, $user, $pass, $db);
+// 1. Initialize MySQLi
+$koneksi = mysqli_init();
+
+// 2. Set SSL (Required for TiDB Cloud)
+// We pass NULL because the server uses a valid certificate by default
+mysqli_ssl_set($koneksi, NULL, NULL, NULL, NULL, NULL);
+
+// 3. Connect using the port and SSL settings
+$status = mysqli_real_connect(
+    $koneksi, 
+    $host, 
+    $user, 
+    $pass, 
+    $db, 
+    $port
+);
 
 // Check connection
-if (!$koneksi) {
-    // In a real production site, you'd hide the error details, 
-    // but for development, this is perfect.
-    die("Gagal terhubung ke database: " . mysqli_connect_error());
+if (!$status) {
+    die("Gagal terhubung ke database cloud: " . mysqli_connect_error());
 }
 
-// Set charset to utf8mb4 (optional, but recommended for special characters/emojis)
+// Set charset to utf8mb4
 mysqli_set_charset($koneksi, "utf8mb4");
 ?>
