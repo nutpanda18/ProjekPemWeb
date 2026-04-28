@@ -64,9 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Redirect to files in the same 'api' folder
                 if ($user_data['role'] === 'admin') {
-                    header("Location: dashboard_admin.php");
+                    header("Location: /api/dashboard_admin.php");
                 } else {
-                    header("Location: Home.php");
+                    header("Location: /api/Home.php");
                 }
                 exit();
             } else {
