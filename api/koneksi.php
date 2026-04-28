@@ -26,7 +26,7 @@ $status = mysqli_real_connect(
 );
 
 // Check connection
-if (!$real_connect) {
+if (!$status) {
     die("Gagal terhubung ke database cloud: " . mysqli_connect_error());
 }
 
