@@ -11,7 +11,7 @@ $koneksi = mysqli_init();
 
 // 2. Set SSL (Required for TiDB Cloud)
 // We pass NULL because the server uses a valid certificate by default
-mysqli_ssl_set($koneksi, NULL, NULL, NULL, NULL, NULL);
+mysqli_options($koneksi, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
 
 // 3. Connect using the port and SSL settings
 $status = mysqli_real_connect(
