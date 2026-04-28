@@ -22,7 +22,7 @@ $status = mysqli_real_connect(
     $db, 
     $port,
     NULL,
-    MYSQL_CLIENT_SSL
+    16
 );
 
 // Check connection
