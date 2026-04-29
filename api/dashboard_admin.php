@@ -39,15 +39,16 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
 <body class="bg-[#fffaf5] text-stone-800">
 
     <nav class="bg-[#4a2c1d] text-white shadow-lg mb-10">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="font-bold text-xl flex items-center gap-2">🍂 Admin Panel</h1>
-            <div class="flex items-center space-x-6 text-sm">
-                <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
-                <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($current_user); ?></span>
-                <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition">Logout</a>
-            </div>
+    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <h1 class="font-bold text-xl flex items-center gap-2">🍂 Admin Panel</h1>
+        <div class="flex items-center space-x-6 text-sm">
+            <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
+            <a href="/api/Tentang.php" class="hover:text-amber-400">Tentang</a>
+            <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($current_user); ?></span>
+            <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition">Logout</a>
         </div>
-    </nav>   
+    </div>
+</nav>   
 
     <div class="container mx-auto px-4 max-w-6xl">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">

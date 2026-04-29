@@ -1,9 +1,13 @@
-//coba
 <?php
-session_start();
+/**
+ * Tentang.php
+ * Updated to use Cookie-based authentication for Vercel
+ */
 
-$isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true;
-$currentUser = $isLoggedIn ? $_SESSION['username'] : 'Tamu';
+// Check logged in status via Cookies instead of Session
+$isLoggedIn = isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'true';
+$currentUser = $isLoggedIn ? $_COOKIE['username'] : 'Tamu';
+$currentRole = $_COOKIE['role'] ?? 'user';
 ?>
 
 <!DOCTYPE html>
@@ -20,11 +24,14 @@ $currentUser = $isLoggedIn ? $_SESSION['username'] : 'Tamu';
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="font-bold text-xl tracking-tight">🍂 Laporan Keluhan Wisata</h1>
             <div class="flex items-center space-x-6 text-sm">
-                <a href="Home.php" class="hover:text-amber-400">Home</a>
-                <a href="Tentang.php" class="hover:text-amber-400 underline underline-offset-8">Tentang</a>
+                <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
+                <a href="/api/Tentang.php" class="hover:text-amber-400 underline underline-offset-8">Tentang</a>
+                
                 <?php if ($isLoggedIn): ?>
                     <span class="text-amber-300 font-semibold">Hi, <?php echo htmlspecialchars($currentUser); ?></span>
-                    <a href="Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition text-xs">Logout</a>
+                    <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition text-xs">Logout</a>
+                <?php else: ?>
+                    <a href="/api/Login.php" class="bg-orange-600 px-4 py-2 rounded-lg hover:bg-orange-700 transition text-xs">Login</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -81,6 +88,12 @@ $currentUser = $isLoggedIn ? $_SESSION['username'] : 'Tamu';
                     <p class="text-xs text-gray-500 mt-1">Keluhan akan ditindaklanjuti petugas.</p>
                 </div>
             </div>
+        </div>
+
+        <div class="text-center mb-16">
+            <a href="/api/Home.php" class="inline-block bg-orange-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black transition shadow-lg">
+                 Kembali ke Dashboard
+            </a>
         </div>
 
         <div class="text-center border-t border-orange-200 pt-10">
