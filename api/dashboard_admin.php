@@ -1,13 +1,20 @@
 <?php
-session_start();
+/**
+ * dashboard_admin.php
+ * Cookie-based authentication for Vercel
+ */
 include 'koneksi.php';
 
-if (!isset($_SESSION['isLoggedIn']) || $_SESSION['role'] !== 'admin') { 
-    header("Location: Login.php"); 
+// 1. Security Check: Must be logged in AND must be an admin
+if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true' || $_COOKIE['role'] !== 'admin') { 
+    header("Location: /api/Login.php"); 
     exit(); 
 }
 
-// 1. Fetch Stats
+// Get display name from cookie
+$current_user = $_COOKIE['username'] ?? 'Admin';
+
+// 2. Fetch Stats (Same logic, ensured $koneksi is healthy)
 $total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan");
 $total_reports = mysqli_fetch_assoc($total_q)['total'] ?? 0;
 
@@ -17,7 +24,6 @@ $pending_reports = mysqli_fetch_assoc($pending_q)['total'] ?? 0;
 $resolved_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Selesai'");
 $resolved_reports = mysqli_fetch_assoc($resolved_q)['total'] ?? 0;
 
-// 2. Calculate Efficiency Percentage
 $efficiency = ($total_reports > 0) ? ($resolved_reports / $total_reports) * 100 : 0;
 
 $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_laporan DESC");
@@ -29,24 +35,21 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
     <meta charset="UTF-8">
     <title>Admin Panel - Laporan Wisata</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style_admin.css">
 </head>
 <body class="bg-[#fffaf5] text-stone-800">
 
     <nav class="bg-[#4a2c1d] text-white shadow-lg mb-10">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="font-bold text-xl flex items-center gap-2">🍂 Laporan Keluhan Wisata</h1>
+            <h1 class="font-bold text-xl flex items-center gap-2">🍂 Admin Panel</h1>
             <div class="flex items-center space-x-6 text-sm">
-                <a href="Home.php" class="hover:text-amber-400">Home</a>
-                <a href="Tentang.php" class="hover:text-amber-400">Tentang</a>
-                <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($_SESSION['username']); ?></span>
-                <a href="Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg font-bold">Logout</a>
+                <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
+                <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($current_user); ?></span>
+                <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition">Logout</a>
             </div>
         </div>
     </nav>   
 
     <div class="container mx-auto px-4 max-w-6xl">
-        
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-stone-400">
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Total Laporan</p>
@@ -82,24 +85,18 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                             <tr class="hover:bg-orange-50/30 transition-colors">
                                 <td class="p-4 w-20">
                                     <?php 
-                                    // Make sure folder name is exactly 'uploads' (no underscore) idk
-                                    $imagePath = "uploads/" . $row['foto'];
-                                    
-                                    if(!empty($row['foto']) && file_exists($imagePath)): ?>
-                                        <a href="<?= $imagePath; ?>" target="_blank">
-                                            <img src="<?= $imagePath; ?>" class="w-12 h-12 object-cover rounded-lg border border-orange-100 shadow-sm hover:scale-110 transition">
-                                        </a>
+                                    // Path for Vercel/TiDB storage (usually relative to root)
+                                    $imagePath = "../uploads/" . $row['foto'];
+                                    if(!empty($row['foto'])): ?>
+                                        <img src="<?= $imagePath; ?>" class="w-12 h-12 object-cover rounded-lg border shadow-sm">
                                     <?php else: ?>
-                                        <div title="Path checked: <?= realpath($imagePath); ?>" class="w-12 h-12 bg-stone-100 rounded-lg flex flex-col items-center justify-center text-[7px] text-stone-400 leading-tight text-center px-1 cursor-help">
-                                            <span>⚠️</span>
-                                            <span><?= empty($row['foto']) ? "No Data" : "File Missing"; ?></span>
-                                        </div>
+                                        <div class="w-12 h-12 bg-stone-100 rounded-lg flex items-center justify-center text-[8px] text-stone-400">No Img</div>
                                     <?php endif; ?>
                                 </td>
 
                                 <td class="p-4">
                                     <div class="flex flex-col gap-0.5">
-                                        <span class="text-[10px] text-gray-400 font-medium"><?= $row['tanggal_laporan']; ?></span>
+                                        <span class="text-[10px] text-gray-400"><?= $row['tanggal_laporan']; ?></span>
                                         <span class="font-bold text-orange-900 text-sm"><?= htmlspecialchars($row['lokasi_wisata']); ?></span>
                                         <span class="text-stone-500 italic">Oleh: <?= htmlspecialchars($row['nama_pelapor']); ?></span>
                                         <p class="mt-1 text-stone-400 line-clamp-1"><?= htmlspecialchars($row['isi_laporan']); ?></p>
@@ -107,9 +104,7 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                                 </td>
 
                                 <td class="p-4 text-center">
-                                    <?php 
-                                        $statusColor = ($row['status'] == 'Selesai') ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-orange-700 border-orange-100';
-                                    ?>
+                                    <?php $statusColor = ($row['status'] == 'Selesai') ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-orange-700'; ?>
                                     <span class="px-2 py-1 <?= $statusColor; ?> rounded-md text-[9px] font-bold border uppercase"><?= $row['status']; ?></span>
                                 </td>
 
@@ -130,7 +125,7 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
 
             <div class="lg:col-span-1">
                 <div class="bg-white p-6 rounded-[2rem] shadow-md border border-orange-50 sticky top-10">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">Efektivitas Penyelesaian</p>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">Efektivitas</p>
                     <div class="flex justify-between text-xs font-bold mb-2">
                         <span>Laporan Selesai</span>
                         <span class="text-green-600"><?= round($efficiency); ?>%</span>
@@ -138,7 +133,6 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                     <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                         <div class="bg-green-500 h-full transition-all duration-500" style="width: <?= $efficiency; ?>%"></div>
                     </div>
-                    <p class="text-[9px] text-gray-400 mt-3 italic">*Dihitung dari total laporan masuk dibandingkan laporan selesai.</p>
                 </div>
             </div>
         </div>

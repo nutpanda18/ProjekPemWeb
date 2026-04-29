@@ -1,15 +1,16 @@
 <?php
-session_start();
-
 // Since Login.php and koneksi.php are in the same 'api' folder
 include 'koneksi.php'; 
 
 // --- LOGOUT LOGIC ---
 if (isset($_GET['logout'])) {
-    session_unset();
-    session_destroy();
-    // Redirect back to index.php in the root folder
-    header("Location: ../index.html"); 
+    // Clear cookies by setting expiration to the past
+    setcookie("isLoggedIn", "", time() - 3600, "/");
+    setcookie("username", "", time() - 3600, "/");
+    setcookie("role", "", time() - 3600, "/");
+    
+    // Redirect back to index.html in the root folder
+    header("Location: /index.html"); 
     exit();
 }
 
@@ -19,10 +20,6 @@ $error_message = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action']; 
     
-    /**
-     * CONNECTION CHECK: 
-     * Ensures $koneksi exists before calling mysqli functions
-     */
     if (!isset($koneksi) || !$koneksi) {
         $error_message = "Koneksi database terputus. Silakan cek file koneksi.php Anda.";
     } else {
@@ -38,11 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $query = "INSERT INTO register (username, email, password, role) VALUES ('$username', '$email', '$password', 'user')";
                 if (mysqli_query($koneksi, $query)) {
-                    $_SESSION['isLoggedIn'] = true;
-                    $_SESSION['username'] = $username;
-                    $_SESSION['role'] = 'user';
-                    // Redirect to Home.php in the same 'api' folder
-                    header("Location: Home.php");
+                    // Set Cookies for 24 hours
+                    setcookie("isLoggedIn", "true", time() + 86400, "/");
+                    setcookie("username", $username, time() + 86400, "/");
+                    setcookie("role", "user", time() + 86400, "/");
+                    
+                    header("Location: /api/Home.php");
                     exit();
                 }
             }
@@ -58,11 +56,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result && mysqli_num_rows($result) > 0) {
                 $user_data = mysqli_fetch_assoc($result);
-                $_SESSION['isLoggedIn'] = true;
-                $_SESSION['username'] = $user_data['username'];
-                $_SESSION['role'] = $user_data['role'];
+                
+                // Set Cookies for 24 hours
+                setcookie("isLoggedIn", "true", time() + 86400, "/");
+                setcookie("username", $user_data['username'], time() + 86400, "/");
+                setcookie("role", $user_data['role'], time() + 86400, "/");
 
-                // Redirect to files in the same 'api' folder
+                // Redirect using absolute paths
                 if ($user_data['role'] === 'admin') {
                     header("Location: /api/dashboard_admin.php");
                 } else {
@@ -76,7 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true;
+// Check logged in status via Cookies
+$isLoggedIn = isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'true';
+$displayUsername = $_COOKIE['username'] ?? '';
+$displayRole = $_COOKIE['role'] ?? '';
 ?>
 
 <!DOCTYPE html>
@@ -107,13 +110,13 @@ $isLoggedIn = isset($_SESSION['isLoggedIn']) && $_SESSION['isLoggedIn'] === true
             <?php if ($isLoggedIn): ?>
                 <div class="text-center">
                     <div class="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-full mb-6 text-4xl">👋</div>
-                    <h1 class="text-3xl font-black text-stone-900">Halo, <?= htmlspecialchars($_SESSION['username']); ?>!</h1>
+                    <h1 class="text-3xl font-black text-stone-900">Halo, <?= htmlspecialchars($displayUsername); ?>!</h1>
                     <div class="mt-10 space-y-3">
-                        <a href="<?= ($_SESSION['role'] == 'admin') ? 'dashboard_admin.php' : 'Home.php'; ?>" 
+                        <a href="<?= ($displayRole == 'admin') ? '/api/dashboard_admin.php' : '/api/Home.php'; ?>" 
                            class="block w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition text-center">
                            Ke Dashboard
                         </a>
-                        <a href="Login.php?logout=true" 
+                        <a href="/api/Login.php?logout=true" 
                            class="block w-full bg-stone-100 text-stone-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 transition text-center">
                            Keluar Akun
                         </a>
