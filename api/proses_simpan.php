@@ -23,31 +23,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $status = "Menunggu";
 
     // --- PHOTO LOGIC (Vercel Friendly) ---
-    $foto_name = "";
+    $foto_name = "no_image.jpg"; // Default placeholder
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
-        // We generate the name so it can be stored in the database
+        // We generate a unique name for the database record
         $foto_name = time() . "_" . basename($_FILES["foto"]["name"]);
         
-        /* NOTE: move_uploaded_file() is removed because Vercel 
-           is a Read-Only file system. To truly save images on Vercel, 
-           you would need a service like Cloudinary or Imgur.
+        /* Note on Vercel: 
+           We cannot use move_uploaded_file() here because the filesystem is read-only.
+           The 'foto' column in TiDB will store the name, but the file won't exist 
+           on the server. To fix this in the future, you would upload to Cloudinary/S3 here.
         */
     }
 
     // 3. Insert into TiDB 
-    // This relies on 'id_laporan' being AUTO_INCREMENT in your database
+    // This works now because 'id_laporan' is AUTO_INCREMENT in your database
     $query = "INSERT INTO laporan (nama_pelapor, lokasi_wisata, isi_laporan, tanggal_laporan, status, foto) 
               VALUES ('$nama_pelapor', '$lokasi_wisata', '$isi_laporan', '$tanggal', '$status', '$foto_name')";
           
     if (mysqli_query($koneksi, $query)) {
-        // Redirect back to user dashboard using absolute path
+        // SUCCESS: Redirect back to user dashboard
         header("Location: /api/dashboard_user.php?pesan=sukses");
         exit();
     } else {
-        // This will help catch if the AUTO_INCREMENT fix hasn't been applied yet
+        // FAILURE: Show the specific database error
         echo "Database Error: " . mysqli_error($koneksi);
     }
 } else {
+    // If accessed directly without POST, send them back
     header("Location: /api/dashboard_user.php");
     exit();
 }
