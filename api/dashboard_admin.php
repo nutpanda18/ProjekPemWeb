@@ -89,7 +89,9 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                                     // Path for Vercel/TiDB storage (usually relative to root)
                                     $imagePath = "../uploads/" . $row['foto'];
                                     if(!empty($row['foto'])): ?>
-                                        <img src="<?= $imagePath; ?>" class="w-12 h-12 object-cover rounded-lg border shadow-sm">
+                                        <img src="/assets/no-image.png" 
+                                            onerror="this.src='https://placehold.co/100x100?text=No+Image'" 
+                                            alt="Foto Laporan">
                                     <?php else: ?>
                                         <div class="w-12 h-12 bg-stone-100 rounded-lg flex items-center justify-center text-[8px] text-stone-400">No Img</div>
                                     <?php endif; ?>
