@@ -1,18 +1,15 @@
 <?php
 /**
  * Login.php
- * Updated for Cookie-based Auth, TiDB Auto-Increment, and Vercel Routing
+ * Final Update: Pure PHP Auto-Toggle + Cookie Auth + TiDB Compatibility
  */
 include 'koneksi.php'; 
 
 // --- LOGOUT LOGIC ---
 if (isset($_GET['logout'])) {
-    // Clear cookies by setting expiration to the past
     setcookie("isLoggedIn", "", time() - 3600, "/");
     setcookie("username", "", time() - 3600, "/");
     setcookie("role", "", time() - 3600, "/");
-    
-    // Redirect to the main landing page
     header("Location: /index.html"); 
     exit();
 }
@@ -31,21 +28,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = mysqli_real_escape_string($koneksi, $_POST['email']);
             $password = mysqli_real_escape_string($koneksi, $_POST['password']);
 
-            // Validation
             $checkUser = mysqli_query($koneksi, "SELECT * FROM register WHERE username='$username' OR email='$email'");
             if (mysqli_num_rows($checkUser) > 0) {
                 $error_message = "Username atau Email sudah terdaftar!";
             } else {
-                // We exclude 'id_user' because the migration script made it AUTO_INCREMENT
                 $query = "INSERT INTO register (username, email, password, role) 
                           VALUES ('$username', '$email', '$password', 'user')";
                 
                 if (mysqli_query($koneksi, $query)) {
-                    // Log them in immediately after registering
                     setcookie("isLoggedIn", "true", time() + 86400, "/");
                     setcookie("username", $username, time() + 86400, "/");
                     setcookie("role", "user", time() + 86400, "/");
-                    
                     header("Location: /api/dashboard_user.php");
                     exit();
                 } else {
@@ -64,13 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result && mysqli_num_rows($result) > 0) {
                 $user_data = mysqli_fetch_assoc($result);
-                
-                // Set Auth Cookies
                 setcookie("isLoggedIn", "true", time() + 86400, "/");
                 setcookie("username", $user_data['username'], time() + 86400, "/");
                 setcookie("role", $user_data['role'], time() + 86400, "/");
 
-                // Route based on role
                 if ($user_data['role'] === 'admin') {
                     header("Location: /api/dashboard_admin.php");
                 } else {
@@ -84,10 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Check login status for UI display
+// UI State Checks
 $isLoggedIn = isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'true';
 $displayUsername = $_COOKIE['username'] ?? '';
 $displayRole = $_COOKIE['role'] ?? '';
+
+// Determine which form to show based on URL ?show=register
+$showRegister = (isset($_GET['show']) && $_GET['show'] === 'register');
 ?>
 
 <!DOCTYPE html>
@@ -137,7 +130,7 @@ $displayRole = $_COOKIE['role'] ?? '';
                         <div class="mb-6 p-4 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100">⚠️ <?= $error_message; ?></div>
                     <?php endif; ?>
 
-                    <div id="loginSection">
+                    <div id="loginSection" class="<?= $showRegister ? 'hidden' : '' ?>">
                         <h1 class="text-3xl font-black text-stone-900 tracking-tight mb-8">Selamat Datang!</h1>
                         <form action="/api/Login.php" method="POST" class="space-y-5">
                             <input type="hidden" name="action" value="login">
@@ -145,10 +138,13 @@ $displayRole = $_COOKIE['role'] ?? '';
                             <input type="password" name="password" class="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500" placeholder="Password" required>
                             <button type="submit" class="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-orange-700 transition">Masuk Sekarang</button>
                         </form>
-                        <p class="mt-8 text-center text-sm text-stone-500">Belum punya akun? <button onclick="toggleAuth()" class="text-orange-600 font-bold hover:underline">Daftar di sini</button></p>
+                        <p class="mt-8 text-center text-sm text-stone-500">
+                            Belum punya akun? 
+                            <button type="button" onclick="toggleAuth()" class="text-orange-600 font-bold hover:underline">Daftar di sini</button>
+                        </p>
                     </div>
 
-                    <div id="registerSection" class="hidden">
+                    <div id="registerSection" class="<?= $showRegister ? '' : 'hidden' ?>">
                         <h1 class="text-3xl font-black text-stone-900 tracking-tight mb-8">Buat Akun</h1>
                         <form action="/api/Login.php" method="POST" class="space-y-5">
                             <input type="hidden" name="action" value="register">
@@ -157,7 +153,10 @@ $displayRole = $_COOKIE['role'] ?? '';
                             <input type="password" name="password" class="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500" placeholder="Buat Password" required>
                             <button type="submit" class="w-full bg-stone-900 text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-black transition">Daftar & Masuk</button>
                         </form>
-                        <p class="mt-8 text-center text-sm text-stone-500">Sudah punya akun? <button onclick="toggleAuth()" class="text-orange-600 font-bold hover:underline">Login di sini</button></p>
+                        <p class="mt-8 text-center text-sm text-stone-500">
+                            Sudah punya akun? 
+                            <button type="button" onclick="toggleAuth()" class="text-orange-600 font-bold hover:underline">Login di sini</button>
+                        </p>
                     </div>
                 </div>
             <?php endif; ?>
@@ -166,6 +165,7 @@ $displayRole = $_COOKIE['role'] ?? '';
 
     <script>
         function toggleAuth() {
+            // Manual toggle for users already on the page
             document.getElementById('loginSection').classList.toggle('hidden');
             document.getElementById('registerSection').classList.toggle('hidden');
         }
