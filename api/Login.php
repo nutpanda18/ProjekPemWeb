@@ -1,27 +1,27 @@
 <?php
-// Since Login.php and koneksi.php are in the same 'api' folder
+/**
+ * Login.php
+ * Updated for Cookie-based Auth and Vercel Pathing
+ */
 include 'koneksi.php'; 
 
 // --- LOGOUT LOGIC ---
 if (isset($_GET['logout'])) {
-    // Clear cookies by setting expiration to the past
     setcookie("isLoggedIn", "", time() - 3600, "/");
     setcookie("username", "", time() - 3600, "/");
     setcookie("role", "", time() - 3600, "/");
     
-    // Redirect back to index.html in the root folder
     header("Location: /index.html"); 
     exit();
 }
 
 $error_message = "";
 
-// Check if form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action']; 
     
     if (!isset($koneksi) || !$koneksi) {
-        $error_message = "Koneksi database terputus. Silakan cek file koneksi.php Anda.";
+        $error_message = "Koneksi database terputus.";
     } else {
         // 1. REGISTER LOGIC
         if ($action === 'register') {
@@ -33,14 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (mysqli_num_rows($checkUser) > 0) {
                 $error_message = "Username atau Email sudah terdaftar!";
             } else {
+                // IMPORTANT: Ensure your database table 'register' has id_user set to AUTO_INCREMENT
                 $query = "INSERT INTO register (username, email, password, role) VALUES ('$username', '$email', '$password', 'user')";
                 if (mysqli_query($koneksi, $query)) {
-                    // Set Cookies for 24 hours
                     setcookie("isLoggedIn", "true", time() + 86400, "/");
                     setcookie("username", $username, time() + 86400, "/");
                     setcookie("role", "user", time() + 86400, "/");
                     
-                    header("Location: /api/Home.php");
+                    header("Location: /api/dashboard_user.php");
                     exit();
                 }
             }
@@ -57,16 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result && mysqli_num_rows($result) > 0) {
                 $user_data = mysqli_fetch_assoc($result);
                 
-                // Set Cookies for 24 hours
                 setcookie("isLoggedIn", "true", time() + 86400, "/");
                 setcookie("username", $user_data['username'], time() + 86400, "/");
                 setcookie("role", $user_data['role'], time() + 86400, "/");
 
-                // Redirect using absolute paths
+                // Explicit Routing
                 if ($user_data['role'] === 'admin') {
                     header("Location: /api/dashboard_admin.php");
                 } else {
-                    header("Location: /api/Home.php");
+                    header("Location: /api/dashboard_user.php");
                 }
                 exit();
             } else {
@@ -76,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Check logged in status via Cookies
 $isLoggedIn = isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'true';
 $displayUsername = $_COOKIE['username'] ?? '';
 $displayRole = $_COOKIE['role'] ?? '';
@@ -112,7 +110,7 @@ $displayRole = $_COOKIE['role'] ?? '';
                     <div class="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-full mb-6 text-4xl">👋</div>
                     <h1 class="text-3xl font-black text-stone-900">Halo, <?= htmlspecialchars($displayUsername); ?>!</h1>
                     <div class="mt-10 space-y-3">
-                        <a href="<?= ($displayRole == 'admin') ? '/api/dashboard_admin.php' : '/api/Home.php'; ?>" 
+                        <a href="<?= ($displayRole == 'admin') ? '/api/dashboard_admin.php' : '/api/dashboard_user.php'; ?>" 
                            class="block w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition text-center">
                            Ke Dashboard
                         </a>
@@ -160,11 +158,6 @@ $displayRole = $_COOKIE['role'] ?? '';
         function toggleAuth() {
             document.getElementById('loginSection').classList.toggle('hidden');
             document.getElementById('registerSection').classList.toggle('hidden');
-        }
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('action') === 'register') {
-            toggleAuth();
         }
     </script>
 </body>

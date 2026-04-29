@@ -1,20 +1,26 @@
 <?php
-session_start();
+/**
+ * dashboard_user.php
+ * Updated to use Cookie-based authentication and TiDB Cloud compatibility
+ */
 include 'koneksi.php'; 
 include 'api.php'; 
 
-if (!isset($_SESSION['isLoggedIn'])) { 
-    header("Location: Login.php"); 
+// 1. Security Check: Use Cookies instead of Sessions
+if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true') { 
+    header("Location: /api/Login.php"); 
     exit(); 
 }
 
-$currentUser = $_SESSION['username'];
+// 2. Identify the user from the Cookie
+$currentUser = $_COOKIE['username'];
 $wisata_data = getWisataData(); 
 
-// Data Counts
+// 3. Fetch Data Counts using the current cookie-user
 $user_total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE nama_pelapor='$currentUser'");
 $total_data = mysqli_fetch_assoc($user_total_q)['total'] ?? 0;
 
+// 4. Fetch User Reports
 $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapor='$currentUser' ORDER BY tanggal_laporan DESC");
 ?>
 
@@ -22,6 +28,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard User - Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style_user.css"> 
@@ -32,10 +39,10 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="font-bold text-xl tracking-tight">🍂 Laporan Keluhan Wisata Madiun</h1>
             <div class="flex items-center space-x-6 text-sm">
-                <a href="Home.php" class="hover:text-amber-400">Home</a>
-                <a href="Tentang.php" class="hover:text-amber-400">Tentang</a>
+                <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
+                <a href="/api/Tentang.php" class="hover:text-amber-400">Tentang</a>
                 <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($currentUser); ?></span>
-                <a href="Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition">Logout</a>
+                <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition">Logout</a>
             </div>
         </div>
     </nav>
@@ -124,7 +131,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                 <form action="proses_simpan.php" method="POST" enctype="multipart/form-data" class="space-y-4">
                     <div>
                         <label class="text-[9px] font-bold text-gray-400 uppercase">Pelapor</label>
-                        <input type="text" name="nama_pelapor" value="<?= $currentUser; ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold" readonly>
+                        <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold" readonly>
                     </div>
                     
                     <div>
@@ -140,7 +147,6 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                     }
                                 }
                             } else {
-                                // Manual backup options
                                 echo "<option value='Pahlawan Street Center'>Pahlawan Street Center</option>";
                                 echo "<option value='Madiun Umbul Square'>Madiun Umbul Square</option>";
                                 echo "<option value='Taman Sumber Umis'>Taman Sumber Umis</option>";
