@@ -1,16 +1,18 @@
 <?php
 /**
  * Login.php
- * Updated for Cookie-based Auth and Vercel Pathing
+ * Updated for Cookie-based Auth, TiDB Auto-Increment, and Vercel Routing
  */
 include 'koneksi.php'; 
 
 // --- LOGOUT LOGIC ---
 if (isset($_GET['logout'])) {
+    // Clear cookies by setting expiration to the past
     setcookie("isLoggedIn", "", time() - 3600, "/");
     setcookie("username", "", time() - 3600, "/");
     setcookie("role", "", time() - 3600, "/");
     
+    // Redirect to the main landing page
     header("Location: /index.html"); 
     exit();
 }
@@ -29,19 +31,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = mysqli_real_escape_string($koneksi, $_POST['email']);
             $password = mysqli_real_escape_string($koneksi, $_POST['password']);
 
+            // Validation
             $checkUser = mysqli_query($koneksi, "SELECT * FROM register WHERE username='$username' OR email='$email'");
             if (mysqli_num_rows($checkUser) > 0) {
                 $error_message = "Username atau Email sudah terdaftar!";
             } else {
-                // IMPORTANT: Ensure your database table 'register' has id_user set to AUTO_INCREMENT
-                $query = "INSERT INTO register (username, email, password, role) VALUES ('$username', '$email', '$password', 'user')";
+                // We exclude 'id_user' because the migration script made it AUTO_INCREMENT
+                $query = "INSERT INTO register (username, email, password, role) 
+                          VALUES ('$username', '$email', '$password', 'user')";
+                
                 if (mysqli_query($koneksi, $query)) {
+                    // Log them in immediately after registering
                     setcookie("isLoggedIn", "true", time() + 86400, "/");
                     setcookie("username", $username, time() + 86400, "/");
                     setcookie("role", "user", time() + 86400, "/");
                     
                     header("Location: /api/dashboard_user.php");
                     exit();
+                } else {
+                    $error_message = "Gagal mendaftar: " . mysqli_error($koneksi);
                 }
             }
         } 
@@ -57,11 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result && mysqli_num_rows($result) > 0) {
                 $user_data = mysqli_fetch_assoc($result);
                 
+                // Set Auth Cookies
                 setcookie("isLoggedIn", "true", time() + 86400, "/");
                 setcookie("username", $user_data['username'], time() + 86400, "/");
                 setcookie("role", $user_data['role'], time() + 86400, "/");
 
-                // Explicit Routing
+                // Route based on role
                 if ($user_data['role'] === 'admin') {
                     header("Location: /api/dashboard_admin.php");
                 } else {
@@ -75,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Check login status for UI display
 $isLoggedIn = isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'true';
 $displayUsername = $_COOKIE['username'] ?? '';
 $displayRole = $_COOKIE['role'] ?? '';
@@ -86,7 +96,7 @@ $displayRole = $_COOKIE['role'] ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Auth - Laporan Keluhan Wisata</title>
+    <title>Auth - Wisata Madiun</title>
 </head>
 <body class="bg-stone-100 flex items-center justify-center min-h-screen p-4">
     
@@ -112,11 +122,11 @@ $displayRole = $_COOKIE['role'] ?? '';
                     <div class="mt-10 space-y-3">
                         <a href="<?= ($displayRole == 'admin') ? '/api/dashboard_admin.php' : '/api/dashboard_user.php'; ?>" 
                            class="block w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition text-center">
-                           Ke Dashboard
+                            Ke Dashboard
                         </a>
                         <a href="/api/Login.php?logout=true" 
                            class="block w-full bg-stone-100 text-stone-600 font-bold py-4 rounded-2xl hover:bg-red-50 hover:text-red-600 transition text-center">
-                           Keluar Akun
+                            Keluar Akun
                         </a>
                     </div>
                 </div>
@@ -129,7 +139,7 @@ $displayRole = $_COOKIE['role'] ?? '';
 
                     <div id="loginSection">
                         <h1 class="text-3xl font-black text-stone-900 tracking-tight mb-8">Selamat Datang!</h1>
-                        <form action="Login.php" method="POST" class="space-y-5">
+                        <form action="/api/Login.php" method="POST" class="space-y-5">
                             <input type="hidden" name="action" value="login">
                             <input type="text" name="user_input" class="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500" placeholder="Username atau Email" required>
                             <input type="password" name="password" class="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500" placeholder="Password" required>
@@ -140,7 +150,7 @@ $displayRole = $_COOKIE['role'] ?? '';
 
                     <div id="registerSection" class="hidden">
                         <h1 class="text-3xl font-black text-stone-900 tracking-tight mb-8">Buat Akun</h1>
-                        <form action="Login.php" method="POST" class="space-y-5">
+                        <form action="/api/Login.php" method="POST" class="space-y-5">
                             <input type="hidden" name="action" value="register">
                             <input type="text" name="username" class="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500" placeholder="Username" required>
                             <input type="email" name="email" class="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500" placeholder="Alamat Email" required>
