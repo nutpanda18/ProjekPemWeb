@@ -127,9 +127,9 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                                 </div>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="p-4 align-top text-center">
+                                        <td class="p-4 align-top text-center whitespace-nowrap">
                                             <?php 
-                                            $badgeClass = 'bg-stone-100 text-stone-600'; // Default / Proses
+                                            $badgeClass = 'bg-stone-100 text-stone-600'; 
                                             if ($r['status'] === 'Diterima') { $badgeClass = 'bg-green-100 text-green-700'; }
                                             elseif ($r['status'] === 'Tidak Diterima') { $badgeClass = 'bg-red-100 text-red-700'; }
                                             ?>
@@ -204,7 +204,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 
                     <div class="bg-orange-50 p-4 rounded-xl border border-dashed border-orange-200">
                         <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Ambil Foto Bukti (Kamera HP)</label>
-                        <input type="file" name="foto" accept="image/*" capture="environment" required
+                        <input type="file" name="foto" id="cameraField" accept="image/*" capture="environment" required
                                class="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer">
                     </div>
 
@@ -261,6 +261,13 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
         marker.on('dragend', function() {
             const currentPos = marker.getLatLng();
             updateFormCoordinates(currentPos.lat, currentPos.lng);
+        });
+
+        // Mobile camera runtime enforcement
+        document.getElementById('cameraField').addEventListener('click', function() {
+            if(window.innerWidth > 1024) return;
+            this.setAttribute('accept', 'image/*');
+            this.setAttribute('capture', 'environment');
         });
     </script>
 </body>
