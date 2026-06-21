@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_user.php
- * Updated to use Cookie-based authentication and TiDB Cloud compatibility
+ * Fully Enhanced: Camera Capture, Geolocation Maps, Structured Categories, and Admin Responses
  */
 include 'koneksi.php'; 
 include 'api.php'; 
@@ -20,7 +20,7 @@ $wisata_data = getWisataData();
 $user_total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE nama_pelapor='$currentUser'");
 $total_data = mysqli_fetch_assoc($user_total_q)['total'] ?? 0;
 
-// 4. Fetch User Reports
+// 4. Fetch User Reports (Ordered by latest report)
 $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapor='$currentUser' ORDER BY tanggal_laporan DESC");
 ?>
 
@@ -31,6 +31,8 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard User - Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="style_user.css"> 
 </head>
 <body class="bg-stone-50">
@@ -72,11 +74,11 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-xs">
                             <span class="text-orange-700 font-bold block">📍 Fasilitas</span>
-                            <p class="text-stone-500">Toilet, Parkir, Lampu Jalan, dll.</p>
+                            <p class="text-stone-500">Toilet, Parkir, Bangku Jalan, Lampu, dll.</p>
                         </div>
                         <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-xs">
                             <span class="text-orange-700 font-bold block">🧹 Kebersihan</span>
-                            <p class="text-stone-500">Sampah menumpuk, bau tidak sedap.</p>
+                            <p class="text-stone-500">Sampah menumpuk, bau tidak sedap, limbah.</p>
                         </div>
                     </div>
                 </div>
@@ -85,57 +87,87 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     <h3 class="font-bold text-orange-900 mb-6 flex items-center gap-2">
                         <span class="text-orange-600 text-2xl">|</span> Daftar Laporan Anda
                     </h3>
-                    <div class="report-table-container bg-white rounded-3xl shadow-sm overflow-hidden border border-stone-200">
-                        <table class="w-full text-left">
-                            <thead class="bg-orange-50 text-orange-900">
-                                <tr>
-                                    <th class="p-4 text-xs font-black uppercase">Foto</th>
-                                    <th class="p-4 text-xs font-black uppercase">Tanggal & Lokasi</th>
-                                    <th class="p-4 text-xs font-black uppercase">Keluhan</th>
-                                    <th class="p-4 text-center text-xs font-black uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-xs divide-y divide-orange-50">
-                                <?php while($r = mysqli_fetch_assoc($reports_query)): ?>
-                                <tr class="hover:bg-orange-50/30 transition">
-                                    <td class="p-4">
-                                        <?php if(!empty($r['foto'])): ?>
-                                            <a href="uploads/<?= $r['foto']; ?>" target="_blank">
-                                                <img src="uploads/<?= $r['foto']; ?>" class="w-12 h-12 object-cover rounded-lg border border-orange-200 shadow-sm">
-                                            </a>
-                                        <?php else: ?>
-                                            <div class="w-12 h-12 bg-stone-100 rounded-lg flex items-center justify-center text-[8px] text-stone-400">N/A</div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="p-4">
-                                        <div class="text-gray-400"><?= $r['tanggal_laporan']; ?></div>
-                                        <div class="font-bold text-orange-900"><?= htmlspecialchars($r['lokasi_wisata']); ?></div>
-                                    </td>
-                                    <td class="p-4 text-gray-500 italic"><?= htmlspecialchars($r['isi_laporan']); ?></td>
-                                    <td class="p-4 text-center">
-                                        <span class="px-3 py-1 <?= ($r['status'] == 'Selesai') ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-orange-800'; ?> rounded-md text-[9px] font-black uppercase">
-                                            <?= $r['status']; ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
+                    <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-stone-200">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left table-auto">
+                                <thead class="bg-orange-50 text-orange-900">
+                                    <tr>
+                                        <th class="p-4 text-xs font-black uppercase">Foto</th>
+                                        <th class="p-4 text-xs font-black uppercase">Detail Informasi</th>
+                                        <th class="p-4 text-xs font-black uppercase">Isi Keluhan</th>
+                                        <th class="p-4 text-center text-xs font-black uppercase">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-xs divide-y divide-orange-50">
+                                    <?php while($r = mysqli_fetch_assoc($reports_query)): ?>
+                                    <tr class="hover:bg-orange-50/30 transition">
+                                        <td class="p-4 align-top">
+                                            <?php if(!empty($r['foto'])): ?>
+                                                <a href="<?= (strpos($r['foto'], 'http') === 0) ? $r['foto'] : 'uploads/'.$r['foto']; ?>" target="_blank">
+                                                    <img src="<?= (strpos($r['foto'], 'http') === 0) ? $r['foto'] : 'uploads/'.$r['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-orange-200 shadow-sm">
+                                                </a>
+                                            <?php else: ?>
+                                                <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">N/A</div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="p-4 align-top space-y-1">
+                                            <div class="text-stone-400 text-[10px]"><?= $r['tanggal_laporan']; ?></div>
+                                            <div class="font-black text-stone-900"><?= htmlspecialchars($r['lokasi_wisata']); ?></div>
+                                            <?php if(!empty($r['kategori'])): ?>
+                                                <span class="inline-block bg-stone-100 text-stone-700 font-bold px-2 py-0.5 rounded text-[9px]"><?= htmlspecialchars($r['kategori']); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="p-4 align-top space-y-3">
+                                            <p class="text-stone-600 italic">"<?= htmlspecialchars($r['isi_laporan']); ?>"</p>
+                                            
+                                            <?php if(!empty($r['tanggapan_admin'])): ?>
+                                                <div class="bg-stone-50 border border-stone-200 p-3 rounded-xl space-y-1">
+                                                    <span class="text-[9px] font-black text-orange-700 uppercase tracking-wider block">💬 Tanggapan Admin:</span>
+                                                    <p class="text-stone-700 font-medium text-xs"><?= htmlspecialchars($r['tanggapan_admin']); ?></p>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="p-4 align-top text-center">
+                                            <?php 
+                                            $badgeClass = 'bg-stone-100 text-stone-600'; // Default / Proses
+                                            if ($r['status'] === 'Diterima') { $badgeClass = 'bg-green-100 text-green-700'; }
+                                            elseif ($r['status'] === 'Tidak Diterima') { $badgeClass = 'bg-red-100 text-red-700'; }
+                                            ?>
+                                            <span class="px-3 py-1 <?= $badgeClass; ?> rounded-full text-[9px] font-black uppercase tracking-wider">
+                                                <?= htmlspecialchars($r['status']); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="glass-card bg-white p-8 rounded-3xl shadow-xl border-t-8 border-orange-600 h-fit sticky top-24">
+            <div class="glass-card bg-white p-6 rounded-3xl shadow-xl border-t-8 border-orange-600 h-fit sticky top-24">
                 <h3 class="font-bold text-orange-900 mb-6 text-center text-xl">Buat Pengaduan</h3>
                 
                 <form action="proses_simpan.php" method="POST" enctype="multipart/form-data" class="space-y-4">
                     <div>
                         <label class="text-[9px] font-bold text-gray-400 uppercase">Pelapor</label>
-                        <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold" readonly>
+                        <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold outline-none" readonly>
+                    </div>
+
+                    <div>
+                        <label class="text-[9px] font-bold text-stone-600 uppercase">Kategori Masalah</label>
+                        <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" required>
+                            <option value="">-- Pilih Kategori --</option>
+                            <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
+                            <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
+                            <option value="Keamanan">Keamanan & Parkir Liar</option>
+                            <option value="Pelayanan">Pelayanan Petugas Wisata</option>
+                        </select>
                     </div>
                     
                     <div>
-                        <label class="text-[9px] font-bold text-gray-400 uppercase">Lokasi Wisata</label>
+                        <label class="text-[9px] font-bold text-stone-600 uppercase">Nama Destinasi Wisata</label>
                         <select name="lokasi_wisata" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" required>
                             <option value="">-- Pilih Lokasi --</option>
                              <?php 
@@ -156,13 +188,23 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     </div>
 
                     <div>
+                        <label class="text-[9px] font-bold text-stone-600 uppercase">Koordinat Geografis (Otomatis)</label>
+                        <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menghubungkan GPS Satelit..." class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-700 font-medium text-xs outline-none" readonly required>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-bold text-stone-600 uppercase block">Titik Lokasi Peta</label>
+                        <div id="userMap" class="w-full h-44 rounded-2xl border border-stone-200 shadow-sm z-10"></div>
+                    </div>
+
+                    <div>
                         <label class="text-[9px] font-bold text-gray-400 uppercase">Isi Keluhan</label>
-                        <textarea name="isi_laporan" rows="4" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Jelaskan masalah..." required></textarea>
+                        <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Jelaskan detail masalah..." required></textarea>
                     </div>
 
                     <div class="bg-orange-50 p-4 rounded-xl border border-dashed border-orange-200">
-                        <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Foto Bukti</label>
-                        <input type="file" name="foto" accept="image/*" required
+                        <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Ambil Foto Bukti (Kamera HP)</label>
+                        <input type="file" name="foto" accept="image/*" capture="environment" required
                                class="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer">
                     </div>
 
@@ -173,5 +215,53 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
             </div>
         </div>
     </div>
+
+    <script>
+        // Set fallback center to Madiun center coordinates
+        const madiunLat = -7.6298;
+        const madiunLng = 111.5240;
+
+        // Initialize map engine
+        const map = L.map('userMap').setView([madiunLat, madiunLng], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Standard draggable navigation pin
+        let marker = L.marker([madiunLat, madiunLng], {draggable: true}).addTo(map);
+
+        function updateFormCoordinates(lat, lng) {
+            document.getElementById('gps_koordinat').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+
+        // Run default baseline values
+        updateFormCoordinates(madiunLat, madiunLng);
+
+        // Fetch physical hardware device location coordinates
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const deviceLocation = new L.LatLng(lat, lng);
+                    
+                    marker.setLatLng(deviceLocation);
+                    map.setView(deviceLocation, 16);
+                    updateFormCoordinates(lat, lng);
+                },
+                () => {
+                    console.log("GPS access denied. Falling back to default Madiun baseline.");
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        // Update the form values instantly if the user drags the pinpoint on the interface map
+        marker.on('dragend', function() {
+            const currentPos = marker.getLatLng();
+            updateFormCoordinates(currentPos.lat, currentPos.lng);
+        });
+    </script>
 </body>
 </html>
