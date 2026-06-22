@@ -1,7 +1,8 @@
 <?php
 /**
  * dashboard_admin.php
- * Fully Updated: Imgur Image Integration, Diterima/Tidak Diterima Workflow, Categories, and Interactive Response Modals
+ * Fully Updated: Imgur Image Integration, Diterima/Tidak Diterima Workflow, Categories,
+ * Interactive Response Modals, and Crash Protection.
  */
 include 'koneksi.php';
 
@@ -14,20 +15,30 @@ if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true' || $_COO
 // Get display name from cookie
 $current_user = $_COOKIE['username'] ?? 'Admin';
 
-// 2. Fetch Dynamic Dashboard Metrics (Updated to match Diterima vs Tidak Diterima workflow)
+// 2. Fetch Dynamic Dashboard Metrics (Wrapped in validation helpers to prevent boolean errors)
 $total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan");
+if (!$total_q) {
+    die("<div style='color:red; font-family:sans-serif; padding:20px; background:#ffebee; border-radius:10px; margin:20px;'>".
+        "<h3>❌ Admin Connection Failed!</h3><strong>Error:</strong> " . mysqli_error($koneksi) . "</div>");
+}
 $total_reports = mysqli_fetch_assoc($total_q)['total'] ?? 0;
 
 $accepted_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Diterima'");
-$accepted_reports = mysqli_fetch_assoc($accepted_q)['total'] ?? 0;
+if (!$accepted_q) { $accepted_reports = 0; }
+else { $accepted_reports = mysqli_fetch_assoc($accepted_q)['total'] ?? 0; }
 
 $pending_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Proses' OR status='Menunggu'");
-$pending_reports = mysqli_fetch_assoc($pending_q)['total'] ?? 0;
+if (!$pending_q) { $pending_reports = 0; }
+else { $pending_reports = mysqli_fetch_assoc($pending_q)['total'] ?? 0; }
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
 // Fetch all entry reports ordered by latest submission
 $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_laporan DESC");
+if (!$all_reports) {
+    die("<div style='color:red; font-family:sans-serif; padding:20px; background:#ffebee; border-radius:10px; margin:20px;'>".
+        "<h3>❌ Failed to fetch Laporan List</h3><strong>Error:</strong> " . mysqli_error($koneksi) . "</div>");
+}
 ?>
 
 <!DOCTYPE html>
@@ -89,11 +100,14 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                                 <tr class="hover:bg-orange-50/30 transition-colors">
                                     
                                     <td class="p-4 align-top">
-                                        <?php if(!empty($row['foto'])): ?>
-                                            <a href="<?= (strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; ?>" target="_blank">
-                                                <img src="<?= (strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; ?>" 
+                                        <?php if(!empty($row['foto']) && is_string($row['foto'])): ?>
+                                            <?php 
+                                            $imgUrl = (strpos($row['foto'], 'data:image') === 0 || strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; 
+                                            ?>
+                                            <a href="<?= $imgUrl; ?>" target="_blank">
+                                                <img src="<?= $imgUrl; ?>" 
                                                      class="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm"
-                                                     onerror="this.src='https://placehold.co/150x150?text=Error+Loading'">
+                                                     onerror="this.src='https://placehold.co/150x150?text=No+Image'">
                                             </a>
                                         <?php else: ?>
                                             <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">No Image</div>
@@ -103,8 +117,8 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                                     <td class="p-4 align-top space-y-2">
                                         <div class="flex flex-col gap-0.5">
                                             <span class="text-[10px] text-gray-400 font-medium"><?= $row['tanggal_laporan']; ?></span>
-                                            <span class="font-black text-orange-900 text-sm"><?= htmlspecialchars($row['lokasi_wisata']); ?></span>
-                                            <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor']); ?></span>
+                                            <span class="font-black text-orange-900 text-sm"><?= htmlspecialchars($row['lokasi_wisata'] ?? ''); ?></span>
+                                            <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor'] ?? ''); ?></span>
                                         </div>
 
                                         <div class="flex flex-wrap gap-2 items-center">
@@ -120,7 +134,7 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                                             <?php endif; ?>
                                         </div>
 
-                                        <p class="text-stone-600 bg-stone-50/80 p-2 rounded-xl italic border border-stone-100">"<?= htmlspecialchars($row['isi_laporan']); ?>"</p>
+                                        <p class="text-stone-600 bg-stone-50/80 p-2 rounded-xl italic border border-stone-100">"<?= htmlspecialchars($row['isi_laporan'] ?? ''); ?>"</p>
 
                                         <div class="mt-3 pt-2 border-t border-stone-100">
                                             <form action="simpan_tanggapan.php" method="POST" class="flex gap-2">
@@ -138,12 +152,13 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
 
                                     <td class="p-4 align-top text-center whitespace-nowrap">
                                         <?php 
-                                        $badgeStyle = "bg-stone-100 text-stone-600 border-stone-200"; // Proses / Menunggu
-                                        if ($row['status'] === 'Diterima') { $badgeStyle = "bg-green-50 text-green-700 border-green-200"; }
-                                        elseif ($row['status'] === 'Tidak Diterima') { $badgeStyle = "bg-red-50 text-red-700 border-red-200"; }
+                                        $statusVal = $row['status'] ?? 'Menunggu';
+                                        $badgeStyle = "bg-stone-100 text-stone-600 border-stone-200"; 
+                                        if ($statusVal === 'Diterima') { $badgeStyle = "bg-green-50 text-green-700 border-green-200"; }
+                                        elseif ($statusVal === 'Tidak Diterima' || $statusVal === 'Ditolak') { $badgeStyle = "bg-red-50 text-red-700 border-red-200"; }
                                         ?>
                                         <span class="px-2 py-1 <?= $badgeStyle; ?> rounded-full text-[9px] font-black border uppercase tracking-wider">
-                                            <?= htmlspecialchars($row['status'] === 'Menunggu' ? 'Proses' : $row['status']); ?>
+                                            <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses') ? 'Proses' : $statusVal); ?>
                                         </span>
                                     </td>
 
@@ -162,7 +177,7 @@ $all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_la
                                                 <input type="hidden" name="status" value="Tidak Diterima">
                                                 <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-1 px-2 rounded-lg font-black text-[9px] uppercase transition shadow-sm">
                                                     Tolak
-                                                    </button>
+                                                </button>
                                             </form>
 
                                             <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" 
