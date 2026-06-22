@@ -1,26 +1,22 @@
 <?php
 /**
  * dashboard_user.php
- * Fully Enhanced: Camera Capture, Geolocation Maps, Structured Categories, and Admin Responses
+ * Upgraded Workflow: Automated EXIF GPS Data Extraction from Captured Photos
  */
 include 'koneksi.php'; 
 include 'api.php'; 
 
-// 1. Security Check: Use Cookies instead of Sessions
 if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true') { 
     header("Location: /api/Login.php"); 
     exit(); 
 }
 
-// 2. Identify the user from the Cookie
 $currentUser = $_COOKIE['username'];
 $wisata_data = getWisataData(); 
 
-// 3. Fetch Data Counts using the current cookie-user
 $user_total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE nama_pelapor='$currentUser'");
 $total_data = mysqli_fetch_assoc($user_total_q)['total'] ?? 0;
 
-// 4. Fetch User Reports (Ordered by latest report)
 $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapor='$currentUser' ORDER BY tanggal_laporan DESC");
 ?>
 
@@ -33,6 +29,8 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- EXIF library loaded safely from CDN to extract photo metadata -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <link rel="stylesheet" href="style_user.css"> 
 </head>
 <body class="bg-stone-50">
@@ -129,12 +127,15 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                         </td>
                                         <td class="p-4 align-top text-center whitespace-nowrap">
                                             <?php 
-                                            $badgeClass = 'bg-stone-100 text-stone-600'; 
-                                            if ($r['status'] === 'Diterima') { $badgeClass = 'bg-green-100 text-green-700'; }
-                                            elseif ($r['status'] === 'Tidak Diterima') { $badgeClass = 'bg-red-100 text-red-700'; }
+                                            $badgeClass = 'bg-stone-100 text-stone-600 border border-stone-300'; 
+                                            if ($r['status'] === 'Diterima') { 
+                                                $badgeClass = 'bg-green-100 text-green-700 border border-green-300'; 
+                                            } elseif ($r['status'] === 'Ditolak') { 
+                                                $badgeClass = 'bg-red-100 text-red-700 border border-red-300'; 
+                                            }
                                             ?>
                                             <span class="px-3 py-1 <?= $badgeClass; ?> rounded-full text-[9px] font-black uppercase tracking-wider">
-                                                <?= htmlspecialchars($r['status']); ?>
+                                                <?= htmlspecialchars($r['status'] ?? 'Diproses'); ?>
                                             </span>
                                         </td>
                                     </tr>
@@ -188,8 +189,9 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     </div>
 
                     <div>
-                        <label class="text-[9px] font-bold text-stone-600 uppercase">Koordinat Geografis (Otomatis)</label>
-                        <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menghubungkan GPS Satelit..." class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-700 font-medium text-xs outline-none" readonly required>
+                        <label class="text-[9px] font-bold text-stone-600 uppercase">Koordinat Geografis (Otomatis via Foto)</label>
+                        <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menunggu Anda mengambil foto..." class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-700 font-medium text-xs outline-none" readonly required>
+                        <p id="geo_status" class="text-[10px] text-stone-400 mt-1 italic">Pin peta otomatis berpindah setelah foto dipilih.</p>
                     </div>
 
                     <div class="space-y-1">
@@ -202,9 +204,15 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                         <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Jelaskan detail masalah..." required></textarea>
                     </div>
 
+                    <!-- Enhanced File Input triggering mobile camera with automated metadata parser -->
                     <div class="bg-orange-50 p-4 rounded-xl border border-dashed border-orange-200">
                         <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Ambil Foto Bukti (Kamera HP)</label>
-                        <input type="file" name="foto" id="cameraField" accept="image/*" capture="environment" required
+                        <input type="file" 
+                               name="foto" 
+                               id="cameraField" 
+                               accept="image/jpeg, image/jpg" 
+                               capture="environment" 
+                               required
                                class="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer">
                     </div>
 
@@ -217,57 +225,81 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
     </div>
 
     <script>
-        // Set fallback center to Madiun center coordinates
-        const madiunLat = -7.6298;
-        const madiunLng = 111.5240;
+        // Baseline fallback position (Madiun Hub)
+        const defaultLat = -7.6298;
+        const defaultLng = 111.5240;
 
-        // Initialize map engine
-        const map = L.map('userMap').setView([madiunLat, madiunLng], 13);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        // Initialize Map
+        const map = L.map('userMap').setView([defaultLat, defaultLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        let marker = L.marker([defaultLat, defaultLng]).addTo(map);
 
-        // Standard draggable navigation pin
-        let marker = L.marker([madiunLat, madiunLng], {draggable: true}).addTo(map);
-
-        function updateFormCoordinates(lat, lng) {
+        function updateFormFields(lat, lng) {
             document.getElementById('gps_koordinat').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
+        updateFormFields(defaultLat, defaultLng);
 
-        // Run default baseline values
-        updateFormCoordinates(madiunLat, madiunLng);
-
-        // Fetch physical hardware device location coordinates
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    const deviceLocation = new L.LatLng(lat, lng);
-                    
-                    marker.setLatLng(deviceLocation);
-                    map.setView(deviceLocation, 16);
-                    updateFormCoordinates(lat, lng);
-                },
-                () => {
-                    console.log("GPS access denied. Falling back to default Madiun baseline.");
-                },
-                { enableHighAccuracy: true }
-            );
+        // Helper function to convert EXIF Degree/Minute/Second arrays into decimal format
+        function convertDMSToDD(degrees, minutes, seconds, direction) {
+            let dd = degrees + (minutes / 60) + (seconds / 3600);
+            if (direction === "S" || direction === "W") {
+                dd = dd * -1;
+            }
+            return dd;
         }
 
-        // Update the form values instantly if the user drags the pinpoint on the interface map
-        marker.on('dragend', function() {
-            const currentPos = marker.getLatLng();
-            updateFormCoordinates(currentPos.lat, currentPos.lng);
-        });
+        // Listener targeting the camera input changes
+        document.getElementById('cameraField').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-        // Mobile camera runtime enforcement
-        document.getElementById('cameraField').addEventListener('click', function() {
-            if(window.innerWidth > 1024) return;
-            this.setAttribute('accept', 'image/*');
-            this.setAttribute('capture', 'environment');
+            document.getElementById('geo_status').innerText = "Memproses metadata file foto...";
+            document.getElementById('geo_status').className = "text-[10px] text-amber-600 mt-1 font-bold animate-pulse";
+
+            EXIF.getData(file, function() {
+                const latData = EXIF.getTag(this, "GPSLatitude");
+                const latRef  = EXIF.getTag(this, "GPSLatitudeRef");
+                const lngData = EXIF.getTag(this, "GPSLongitude");
+                const lngRef  = EXIF.getTag(this, "GPSLongitudeRef");
+
+                // Check if the taken picture contains embedded mobile GPS telemetry tags
+                if (latData && latRef && lngData && lngRef) {
+                    const latitude = convertDMSToDD(latData[0], latData[1], latData[2], latRef);
+                    const longitude = convertDMSToDD(lngData[0], lngData[1], lngData[2], lngRef);
+
+                    // Reposition Map elements smoothly based directly on extracted photo data
+                    const imageLocation = new L.LatLng(latitude, longitude);
+                    marker.setLatLng(imageLocation);
+                    map.setView(imageLocation, 17);
+                    updateFormFields(latitude, longitude);
+
+                    document.getElementById('geo_status').innerText = "✅ Lokasi foto berhasil diekstrak otomatis ke peta!";
+                    document.getElementById('geo_status').className = "text-[10px] text-green-600 mt-1 font-bold";
+                } else {
+                    // Fallback to active browser geolocation hardware tracking if file metadata is stripped or clean
+                    document.getElementById('geo_status').innerText = "⚠️ Tidak ada data GPS di foto. Mencoba GPS perangkat...";
+                    
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const deviceLat = position.coords.latitude;
+                                const deviceLng = position.coords.longitude;
+                                const currentLoc = new L.LatLng(deviceLat, deviceLng);
+                                
+                                marker.setLatLng(currentLoc);
+                                map.setView(currentLoc, 16);
+                                updateFormFields(deviceLat, deviceLng);
+                                document.getElementById('geo_status').innerText = "📍 Menggunakan lokasi live perangkat Anda.";
+                                document.getElementById('geo_status').className = "text-[10px] text-blue-600 mt-1 font-bold";
+                            },
+                            () => {
+                                document.getElementById('geo_status').innerText = "❌ Gagal mendeteksi lokasi otomatis.";
+                                document.getElementById('geo_status').className = "text-[10px] text-red-500 mt-1";
+                            }
+                        );
+                    }
+                }
+            });
         });
     </script>
 </body>
