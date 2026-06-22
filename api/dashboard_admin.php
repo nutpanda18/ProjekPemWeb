@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_admin.php
- * Optimized: Crash Protection, Lazy Payload Execution, and Interactive Modals
+ * Fully Optimized: Category Breakdown Analytics, Trend Badges, and Lightbox Modals
  */
 include 'koneksi.php';
 
@@ -30,7 +30,19 @@ $pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] 
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
-// CRITICAL FIX: Fetch metadata first, keep payload handled efficiently
+// NEW FEATURE: Fetch total counts grouped by category
+$category_counts = [];
+$cat_q = mysqli_query($koneksi, "SELECT kategori, COUNT(*) as jumlah FROM laporan WHERE kategori IS NOT NULL AND kategori != '' GROUP BY kategori ORDER BY jumlah DESC");
+if ($cat_q) {
+    while ($row_cat = mysqli_fetch_assoc($cat_q)) {
+        $category_counts[$row_cat['kategori']] = $row_cat['jumlah'];
+    }
+}
+
+// Identify the highest trending category complaint
+$top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
+
+// Fetch all entry reports ordered by latest submission
 $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_wisata, kategori, gps_koordinat, isi_laporan, status, tanggal_laporan, tanggapan_admin, foto FROM laporan ORDER BY tanggal_laporan DESC");
 if (!$all_reports) {
     die("<div style='color:red; font-family:sans-serif; padding:20px; background:#ffebee; border-radius:10px; margin:20px;'>".
@@ -48,7 +60,7 @@ if (!$all_reports) {
 </head>
 <body class="bg-[#fffaf5] text-stone-800">
 
-    <nav class="bg-[#4a2c1d] text-white shadow-lg mb-10 sticky top-0 z-50">
+    <nav class="bg-[#4a2c1d] text-white shadow-lg mb-8 sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="font-bold text-xl flex items-center gap-2">🍂 Admin Panel</h1>
             <div class="flex items-center space-x-6 text-sm">
@@ -61,7 +73,8 @@ if (!$all_reports) {
     </nav>   
 
     <div class="container mx-auto px-4 max-w-6xl">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-stone-400">
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Total Laporan Masuk</p>
                 <h2 class="text-4xl font-black text-stone-800"><?= $total_reports; ?></h2>
@@ -74,6 +87,41 @@ if (!$all_reports) {
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Laporan Diterima (Valid)</p>
                 <h2 class="text-4xl font-black text-green-600"><?= $accepted_reports; ?></h2>
             </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100/70 mb-10">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-stone-100">
+                <div>
+                    <h3 class="font-bold text-stone-900 text-sm flex items-center gap-2">
+                        📊 Rekapitulasi Kategori Keluhan Publik
+                    </h3>
+                    <p class="text-[11px] text-stone-400">Jumlah distribusi laporan keluhan berdasarkan label kategori.</p>
+                </div>
+                <?php if(!empty($category_counts)): ?>
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 flex items-center gap-2 text-xs">
+                        <span class="animate-pulse">⚠️</span>
+                        <span class="text-stone-600">Tren Keluhan Tertinggi: <strong class="text-amber-800 uppercase tracking-wide"><?= htmlspecialchars($top_category); ?></strong></span>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <?php if(empty($category_counts)): ?>
+                <p class="text-xs text-stone-400 italic text-center py-2">Belum ada data laporan kategori terkumpul.</p>
+            <?php else: ?>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <?php foreach($category_counts as $cat_name => $count): ?>
+                        <div class="bg-[#fffaf5] border border-orange-100/50 p-4 rounded-2xl flex flex-col justify-between">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400 block truncate" title="<?= htmlspecialchars($cat_name); ?>">
+                                <?= htmlspecialchars($cat_name); ?>
+                            </span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span class="text-2xl font-black text-stone-800"><?= $count; ?></span>
+                                <span class="text-[10px] text-stone-400 font-medium">laporan</span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -222,7 +270,6 @@ if (!$all_reports) {
             const targetImg = document.getElementById('modalTargetImg');
             const modal = document.getElementById('photoModal');
             
-            // If the raw image isn't a base64 or external url link, route to fallback path cleanly
             if(rawData.indexOf('data:image') !== 0 && rawData.indexOf('http') !== 0) {
                 targetImg.src = '../uploads/' + rawData;
             } else {
