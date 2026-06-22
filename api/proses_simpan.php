@@ -1,7 +1,7 @@
 <?php
 /**
  * proses_simpan.php
- * TiDB-Optimized Direct Base64 String Storage
+ * TiDB-Optimized Direct Base64 String Storage with Secure Escaping
  */
 include 'koneksi.php';
 
@@ -13,25 +13,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_pelapor   = mysqli_real_escape_string($koneksi, $_POST['nama_pelapor'] ?? '');
     $kategori       = mysqli_real_escape_string($koneksi, $_POST['kategori'] ?? '');
     $lokasi_wisata  = mysqli_real_escape_string($koneksi, $_POST['lokasi_wisata'] ?? '');
-    $isi_laporan    = mysqli_real_escape_string($koneksi, $_POST['isi_laporan'] ?? '');
+    $isi_laporan    = $_POST['isi_laporan'] ?? ''; // Escaped below or let HTML handling cover it
+    $isi_laporan_esc = mysqli_real_escape_string($koneksi, $isi_laporan);
     $gps_koordinat  = mysqli_real_escape_string($koneksi, $_POST['gps_koordinat'] ?? '');
     
     $status         = 'Diproses'; 
     $tanggal        = date('Y-m-d H:i:s');
     
-    // 2. Fetch the Base64 String image payload from our updated hidden form field
-    $imageBase64    = $_POST['foto_base64'] ?? '';
+    // 2. Fetch the Base64 String image payload from our hidden form field
+    $rawBase64      = $_POST['foto_base64'] ?? '';
 
-    if (!empty($imageBase64)) {
+    if (!empty($rawBase64)) {
+        // CRITICAL FIX: Escape the base64 string because it contains slashes, pluses, and data URIs
+        $imageBase64 = mysqli_real_escape_string($koneksi, $rawBase64);
         
-        // 3. Insert directly into TiDB cloud rows without touching local server storage folders!
+        // 3. Insert directly into TiDB cloud rows safely!
         $query = "INSERT INTO laporan (nama_pelapor, kategori, lokasi_wisata, isi_laporan, foto, gps_koordinat, status, tanggal_laporan) 
-                  VALUES ('$nama_pelapor', '$kategori', '$lokasi_wisata', '$isi_laporan', '$imageBase64', '$gps_koordinat', '$status', '$tanggal')";
+                  VALUES ('$nama_pelapor', '$kategori', '$lokasi_wisata', '$isi_laporan_esc', '$imageBase64', '$gps_koordinat', '$status', '$tanggal')";
         
         $insert = mysqli_query($koneksi, $query);
 
         if ($insert) {
-            echo "<script>alert('Laporan berhasil terkirim ke TiDB dengan geo-tagging otomatis!'); window.location.href='dashboard_user.php';</script>";
+            echo "<script>alert('Laporan berhasil terkirim dengan kompresi otomatis & geo-tagging!'); window.location.href='dashboard_user.php';</script>";
             exit();
         } else {
             $dbError = mysqli_error($koneksi);

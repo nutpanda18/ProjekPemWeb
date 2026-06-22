@@ -1,10 +1,22 @@
 <?php
 /**
  * dashboard_user.php
- * Automated EXIF GPS Data Extraction with Base64 Cloud Bypass
+ * Automated EXIF GPS Data Extraction with Base64 Cloud Bypass & Safe Client Compression
  */
 include 'koneksi.php'; 
 include 'api.php'; 
+
+// Safeguard check for missing functions
+if (!function_exists('getWisataData')) {
+    function getWisataData() {
+        return [
+            [1, "Pahlawan Street Center"],
+            [2, "Madiun Umbul Square"],
+            [3, "Taman Sumber Umis"],
+            [4, "Hutan Kota Madiun"]
+        ];
+    }
+}
 
 if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true') { 
     header("Location: /api/Login.php"); 
@@ -113,13 +125,13 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                         </td>
                                         <td class="p-4 align-top space-y-1">
                                             <div class="text-stone-400 text-[10px]"><?= $r['tanggal_laporan']; ?></div>
-                                            <div class="font-black text-stone-900"><?= htmlspecialchars($r['lokasi_wisata']); ?></div>
+                                            <div class="font-black text-stone-900"><?= htmlspecialchars($r['lokasi_wisata'] ?? ''); ?></div>
                                             <?php if(!empty($r['kategori'])): ?>
                                                 <span class="inline-block bg-stone-100 text-stone-700 font-bold px-2 py-0.5 rounded text-[9px]"><?= htmlspecialchars($r['kategori']); ?></span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="p-4 align-top space-y-3">
-                                            <p class="text-stone-600 italic">"<?= htmlspecialchars($r['isi_laporan']); ?>"</p>
+                                            <p class="text-stone-600 italic">"<?= htmlspecialchars($r['isi_laporan'] ?? ''); ?>"</p>
                                             
                                             <?php if(!empty($r['tanggapan_admin'])): ?>
                                                 <div class="bg-stone-50 border border-stone-200 p-3 rounded-xl space-y-1">
@@ -131,14 +143,14 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                         <td class="p-4 align-top text-center whitespace-nowrap">
                                             <?php 
                                             $badgeClass = 'bg-stone-100 text-stone-600 border border-stone-300'; 
-                                            if ($r['status'] === 'Diterima') { 
+                                            if (($r['status'] ?? '') === 'Diterima') { 
                                                 $badgeClass = 'bg-green-100 text-green-700 border border-green-300'; 
-                                            } elseif ($r['status'] === 'Ditolak') { 
+                                            } elseif (($r['status'] ?? '') === 'Ditolak' || ($r['status'] ?? '') === 'Tidak Diterima') { 
                                                 $badgeClass = 'bg-red-100 text-red-700 border border-red-300'; 
                                             }
                                             ?>
                                             <span class="px-3 py-1 <?= $badgeClass; ?> rounded-full text-[9px] font-black uppercase tracking-wider">
-                                                <?= htmlspecialchars($r['status'] ?? 'Diproses'); ?>
+                                                <?= htmlspecialchars(($r['status'] === 'Menunggu' || $r['status'] === 'Proses') ? 'Proses' : ($r['status'] ?? 'Proses')); ?>
                                             </span>
                                         </td>
                                     </tr>
@@ -219,7 +231,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                class="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer">
                     </div>
 
-                    <button type="submit" class="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition transform hover:scale-[1.02]">
+                    <button type="submit" id="submitBtn" class="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition transform hover:scale-[1.02]">
                         Kirim Laporan 🚀
                     </button>
                 </form>
@@ -250,14 +262,54 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
             const file = e.target.files[0];
             if (!file) return;
 
-            document.getElementById('geo_status').innerText = "Memproses metadata file foto...";
-            document.getElementById('geo_status').className = "text-[10px] text-amber-600 mt-1 font-bold animate-pulse";
+            const statusText = document.getElementById('geo_status');
+            const submitBtn = document.getElementById('submitBtn');
 
-            // PIPELINE 1: Convert the photo into a Base64 string instantly for TiDB Submission
+            statusText.innerText = "⏳ Memproses & Mengompresi Foto...";
+            statusText.className = "text-[10px] text-amber-600 mt-1 font-bold animate-pulse";
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Mengompresi Gambar...";
+
+            // PIPELINE 1: Client-Side Canvas Compressing into light base64 string
             const reader = new FileReader();
-            reader.onloadend = function() {
-                document.getElementById('foto_base64').value = reader.result;
-            }
+            reader.onload = function(event) {
+                const img = new Image();
+                img.src = event.target.result;
+                
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set safe bounds (Max 600px)
+                    const MAX_WIDTH = 600;
+                    const MAX_HEIGHT = 600;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Compress to 50% Quality factor JPEG
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                    document.getElementById('foto_base64').value = compressedBase64;
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "Kirim Laporan 🚀";
+                };
+            };
             reader.readAsDataURL(file);
 
             // PIPELINE 2: Parse EXIF Geo-Coordinates
@@ -276,10 +328,10 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     map.setView(imageLocation, 17);
                     updateFormFields(latitude, longitude);
 
-                    document.getElementById('geo_status').innerText = "✅ Lokasi foto berhasil diekstrak otomatis ke peta!";
-                    document.getElementById('geo_status').className = "text-[10px] text-green-600 mt-1 font-bold";
+                    statusText.innerText = "✅ Lokasi & Ukuran Berhasil Dikompresi Otomatis!";
+                    statusText.className = "text-[10px] text-green-600 mt-1 font-bold";
                 } else {
-                    document.getElementById('geo_status').innerText = "⚠️ Tidak ada data GPS di foto. Mencoba GPS perangkat...";
+                    statusText.innerText = "⚠️ Tidak ada GPS di foto. Melacak GPS live perangkat...";
                     
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
@@ -291,12 +343,12 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                 marker.setLatLng(currentLoc);
                                 map.setView(currentLoc, 16);
                                 updateFormFields(deviceLat, deviceLng);
-                                document.getElementById('geo_status').innerText = "📍 Menggunakan lokasi live perangkat Anda.";
-                                document.getElementById('geo_status').className = "text-[10px] text-blue-600 mt-1 font-bold";
+                                statusText.innerText = "📍 Menggunakan lokasi live perangkat & Foto Terkompresi!";
+                                statusText.className = "text-[10px] text-blue-600 mt-1 font-bold";
                             },
                             () => {
-                                document.getElementById('geo_status').innerText = "❌ Gagal mendeteksi lokasi otomatis.";
-                                document.getElementById('geo_status').className = "text-[10px] text-red-500 mt-1";
+                                statusText.innerText = "❌ Gagal melacak lokasi otomatis. Gambar terkompresi.";
+                                statusText.className = "text-[10px] text-red-500 mt-1";
                             }
                         );
                     }
