@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_admin.php
- * Fully Optimized: Category Breakdown Analytics, Trend Badges, and Lightbox Modals
+ * Fully Modernized: Left Sidebar Navigation Layout, Integrated Reports Management View
  */
 include 'koneksi.php';
 
@@ -30,7 +30,7 @@ $pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] 
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
-// NEW FEATURE: Fetch total counts grouped by category
+// Fetch total counts grouped by category
 $category_counts = [];
 $cat_q = mysqli_query($koneksi, "SELECT kategori, COUNT(*) as jumlah FROM laporan WHERE kategori IS NOT NULL AND kategori != '' GROUP BY kategori ORDER BY jumlah DESC");
 if ($cat_q) {
@@ -39,7 +39,6 @@ if ($cat_q) {
     }
 }
 
-// Identify the highest trending category complaint
 $top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
 
 // Fetch all entry reports ordered by latest submission
@@ -58,38 +57,77 @@ if (!$all_reports) {
     <title>Admin Panel - Laporan Wisata Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#fffaf5] text-stone-800">
+<body class="bg-[#fffaf5] text-stone-800 min-h-screen flex flex-row overflow-x-hidden">
 
-    <nav class="bg-[#4a2c1d] text-white shadow-lg mb-8 sticky top-0 z-50">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="font-bold text-xl flex items-center gap-2">🍂 Admin Panel</h1>
-            <div class="flex items-center space-x-6 text-sm">
-                <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
-                <a href="/api/Tentang.php" class="hover:text-amber-400">Tentang</a>
-                <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($current_user); ?></span>
-                <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition">Logout</a>
+    <aside class="w-72 bg-[#4a2c1d] text-white flex flex-col justify-between p-6 shrink-0 shadow-xl min-h-screen sticky top-0">
+        <div class="space-y-8">
+            <div class="border-b border-white/10 pb-4">
+                <h1 class="font-black text-xl flex items-center gap-2 tracking-wide text-amber-100">
+                    🍂 AdminPanel
+                </h1>
+                <p class="text-[10px] text-amber-200/60 font-semibold uppercase tracking-wider mt-1">Laporan Wisata Madiun</p>
             </div>
-        </div>
-    </nav>   
 
-    <div class="container mx-auto px-4 max-w-6xl">
+            <nav class="space-y-2">
+                <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 mb-2">Main Menu</p>
+                
+                <a href="#ringkasan" class="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm bg-white/10 text-amber-300 transition-all shadow-inner border-l-4 border-amber-400">
+                    📊 Ringkasan Finansial & Tren
+                </a>
+                
+                <a href="#kelola-laporan" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 transition-all border-l-4 border-transparent">
+                    📋 Kelola Seluruh Laporan Publik
+                </a>
+
+                <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 pt-4 mb-2">Aksi Eksternal</p>
+                <a href="/api/Home.php" target="_blank" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-amber-200/70 hover:text-white transition">
+                    🌐 Buka Landing Page
+                </a>
+                <a href="/api/Tentang.php" target="_blank" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-amber-200/70 hover:text-white transition">
+                    ℹ️ Halaman Informasi
+                </a>
+            </nav>
+        </div>
+
+        <div class="border-t border-white/10 pt-4 space-y-3">
+            <div class="flex items-center justify-between px-2 text-xs">
+                <span class="text-stone-300">Logged in as:</span>
+                <strong class="text-amber-300 font-bold"><?= htmlspecialchars($current_user); ?></strong>
+            </div>
+            <a href="/api/Login.php?logout=true" class="w-full bg-red-600 px-4 py-3 rounded-xl font-bold text-xs text-center block hover:bg-red-700 transition shadow-md">
+                Keluar Akun (Logout)
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-8 lg:p-12 max-w-7xl overflow-y-auto">
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <header id="ringkasan" class="flex items-center justify-between border-b border-stone-200 pb-6 mb-10">
+            <div>
+                <h2 class="text-2xl font-black text-stone-900">Selamat Datang Kembali 👋</h2>
+                <p class="text-xs text-stone-400 mt-0.5">Berikut adalah ringkasan performa dan keluhan infrastruktur terkini.</p>
+            </div>
+            <div class="bg-white px-4 py-2 rounded-2xl border border-stone-200/60 shadow-sm text-xs font-semibold text-stone-600">
+                📅 Hari Ini: <span class="text-stone-900"><?= date('d M Y'); ?></span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-stone-400">
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Total Laporan Masuk</p>
-                <h2 class="text-4xl font-black text-stone-800"><?= $total_reports; ?></h2>
+                <h2 class="text-4xl font-black text-stone-800 mt-1"><?= $total_reports; ?></h2>
             </div>
             <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-amber-500">
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Dalam Proses Evaluasi</p>
-                <h2 class="text-4xl font-black text-amber-500"><?= $pending_reports; ?></h2>
+                <h2 class="text-4xl font-black text-amber-500 mt-1"><?= $pending_reports; ?></h2>
             </div>
             <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-green-500">
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Laporan Diterima (Valid)</p>
-                <h2 class="text-4xl font-black text-green-600"><?= $accepted_reports; ?></h2>
+                <h2 class="text-4xl font-black text-green-600 mt-1"><?= $accepted_reports; ?></h2>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100/70 mb-10">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100/70 mb-12">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-stone-100">
                 <div>
                     <h3 class="font-bold text-stone-900 text-sm flex items-center gap-2">
@@ -124,10 +162,10 @@ if (!$all_reports) {
             <?php endif; ?>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div id="kelola-laporan" class="grid grid-cols-1 lg:grid-cols-3 gap-10 pt-4">
             <div class="lg:col-span-2">
-                <h3 class="font-bold text-orange-900 mb-6 flex items-center gap-2">
-                    <span class="text-orange-600 text-2xl">|</span> Data Administrasi Laporan Wisata
+                <h3 class="font-bold text-orange-900 mb-6 flex items-center gap-2 text-base">
+                    <span class="text-orange-600 text-2xl">|</span> Menu Administrasi Kelola Seluruh Laporan
                 </h3>
                 <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-orange-50">
                     <div class="overflow-x-auto">
@@ -240,7 +278,7 @@ if (!$all_reports) {
             </div>
 
             <div class="lg:col-span-1">
-                <div class="bg-white p-6 rounded-[2rem] shadow-md border border-orange-50 sticky top-24">
+                <div class="bg-white p-6 rounded-[2rem] shadow-md border border-orange-50 sticky top-6">
                     <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">Efisiensi Penanganan Keluhan</p>
                     <div class="flex justify-between text-xs font-bold mb-2">
                         <span>Laporan Terverifikasi</span>
@@ -253,7 +291,7 @@ if (!$all_reports) {
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <div id="photoModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4 transition-all opacity-0 duration-300" onclick="closePhotoModal()">
         <div class="relative max-w-3xl w-full max-h-[85vh] flex items-center justify-center" onclick="event.stopPropagation()">
