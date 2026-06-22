@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_user.php
- * Upgraded Workflow: Automated EXIF GPS Data Extraction from Captured Photos
+ * Automated EXIF GPS Data Extraction from Captured Photos
  */
 include 'koneksi.php'; 
 include 'api.php'; 
@@ -29,7 +29,6 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- EXIF library loaded safely from CDN to extract photo metadata -->
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <link rel="stylesheet" href="style_user.css"> 
 </head>
@@ -204,7 +203,6 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                         <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Jelaskan detail masalah..." required></textarea>
                     </div>
 
-                    <!-- Enhanced File Input triggering mobile camera with automated metadata parser -->
                     <div class="bg-orange-50 p-4 rounded-xl border border-dashed border-orange-200">
                         <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Ambil Foto Bukti (Kamera HP)</label>
                         <input type="file" 
@@ -225,11 +223,9 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
     </div>
 
     <script>
-        // Baseline fallback position (Madiun Hub)
         const defaultLat = -7.6298;
         const defaultLng = 111.5240;
 
-        // Initialize Map
         const map = L.map('userMap').setView([defaultLat, defaultLng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         let marker = L.marker([defaultLat, defaultLng]).addTo(map);
@@ -239,16 +235,12 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
         }
         updateFormFields(defaultLat, defaultLng);
 
-        // Helper function to convert EXIF Degree/Minute/Second arrays into decimal format
         function convertDMSToDD(degrees, minutes, seconds, direction) {
             let dd = degrees + (minutes / 60) + (seconds / 3600);
-            if (direction === "S" || direction === "W") {
-                dd = dd * -1;
-            }
+            if (direction === "S" || direction === "W") { dd = dd * -1; }
             return dd;
         }
 
-        // Listener targeting the camera input changes
         document.getElementById('cameraField').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -262,12 +254,10 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                 const lngData = EXIF.getTag(this, "GPSLongitude");
                 const lngRef  = EXIF.getTag(this, "GPSLongitudeRef");
 
-                // Check if the taken picture contains embedded mobile GPS telemetry tags
                 if (latData && latRef && lngData && lngRef) {
                     const latitude = convertDMSToDD(latData[0], latData[1], latData[2], latRef);
                     const longitude = convertDMSToDD(lngData[0], lngData[1], lngData[2], lngRef);
 
-                    // Reposition Map elements smoothly based directly on extracted photo data
                     const imageLocation = new L.LatLng(latitude, longitude);
                     marker.setLatLng(imageLocation);
                     map.setView(imageLocation, 17);
@@ -276,7 +266,6 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     document.getElementById('geo_status').innerText = "✅ Lokasi foto berhasil diekstrak otomatis ke peta!";
                     document.getElementById('geo_status').className = "text-[10px] text-green-600 mt-1 font-bold";
                 } else {
-                    // Fallback to active browser geolocation hardware tracking if file metadata is stripped or clean
                     document.getElementById('geo_status').innerText = "⚠️ Tidak ada data GPS di foto. Mencoba GPS perangkat...";
                     
                     if (navigator.geolocation) {
