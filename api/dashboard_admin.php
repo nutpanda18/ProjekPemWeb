@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_admin.php
- * Premium Sidebar Navigation with Dynamic View Switching (SPA Feel)
+ * Updated: SPA Layout with Dynamic Tab Filtering (All, Fasilitas, Kebersihan, Pelayanan, Parkir)
  */
 include 'koneksi.php';
 
@@ -51,10 +51,7 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
     <title>Admin Panel - Laporan Wisata Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Smooth transitions for switching views */
-        .dashboard-view {
-            transition: opacity 0.2s ease-in-out;
-        }
+        .dashboard-view { transition: opacity 0.2s ease-in-out; }
     </style>
 </head>
 <body class="bg-[#fffaf5] text-stone-800 min-h-screen flex flex-row overflow-x-hidden">
@@ -162,12 +159,36 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                     <div class="bg-green-500 h-full transition-all duration-500" style="width: <?= $efficiency; ?>%"></div>
                 </div>
-                <p class="text-[10px] text-stone-400 mt-2 leading-relaxed italic">Persentase dihitung berdasarkan total keluhan publik yang dinilai valid ("Diterima") dibanding total keseluruhan data masuk.</p>
             </div>
         </div>
 
         <div id="view-kelola-content" class="dashboard-view hidden space-y-6">
-            <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-orange-50">
+            
+            <div class="flex flex-wrap items-center gap-2 border-b border-stone-200 pb-3" id="tab-filter-bar">
+                <button onclick="filterTableCategory('ALL', this)" class="px-4 py-2 bg-[#4a2c1d] text-white text-xs font-bold rounded-xl shadow-sm transition">
+                    📋 Semua Laporan
+                </button>
+                <button onclick="filterTableCategory('FASILITAS', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
+                    🧱 Fasilitas
+                </button>
+                <button onclick="filterTableCategory('KEBERSIHAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
+                    ✨ Kebersihan
+                </button>
+                <button onclick="filterTableCategory('PELAYANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
+                    🛎️ Pelayanan
+                </button>
+                <button onclick="filterTableCategory('PARKIR', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
+                    🚗 Parkir
+                </button>
+            </div>
+
+            <div id="empty-table-placeholder" class="hidden bg-white p-12 text-center rounded-[2rem] border border-orange-50 shadow-sm">
+                <span class="text-4xl">🍃</span>
+                <h4 class="font-bold text-stone-700 mt-2 text-sm">Tidak Ada Laporan</h4>
+                <p class="text-xs text-stone-400 mt-0.5">Belum ditemukan berkas pengaduan dalam kategori ini.</p>
+            </div>
+
+            <div id="table-card-wrapper" class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-orange-50">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left table-auto">
                         <thead class="bg-[#5c3d2e] text-white font-bold uppercase text-xs">
@@ -178,9 +199,11 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                 <th class="p-4 text-center">Aksi Moderasi</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-orange-50 text-xs">
-                            <?php while($row = mysqli_fetch_assoc($all_reports)): ?>
-                            <tr class="hover:bg-orange-50/30 transition-colors">
+                        <tbody class="divide-y divide-orange-50 text-xs" id="reports-table-body">
+                            <?php while($row = mysqli_fetch_assoc($all_reports)): 
+                                $rowCatClean = strtoupper(trim($row['kategori'] ?? 'UMUM'));
+                            ?>
+                            <tr class="hover:bg-orange-50/30 transition-colors report-data-row" data-category="<?= htmlspecialchars($rowCatClean); ?>">
                                 
                                 <td class="p-4 align-top">
                                     <?php if(!empty($row['foto'])): ?>
@@ -202,7 +225,7 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                         <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor'] ?? ''); ?></span>
                                     </div>
                                     <div class="flex flex-wrap gap-2 items-center">
-                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase"><?= htmlspecialchars($row['kategori'] ?? 'Umum'); ?></span>
+                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide category-badge"><?= htmlspecialchars($row['kategori'] ?? 'UMUM'); ?></span>
                                         <?php if(!empty($row['gps_koordinat'])): ?>
                                             <a href="https://www.openstreetmap.org/search?query=<?= urlencode($row['gps_koordinat']); ?>" target="_blank" class="bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded text-[9px]">🗺️ Peta</a>
                                         <?php endif; ?>
@@ -259,19 +282,17 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
     </div>
 
     <script>
+        // 1. Sidebar Link Switching Section View Engine
         function switchView(viewName, buttonElement) {
-            // 1. Hide all view containers
             document.getElementById('view-ringkasan-content').classList.add('hidden');
             document.getElementById('view-kelola-content').classList.add('hidden');
             
-            // 2. Clear out active styling across sidebar buttons
             const navButtons = document.querySelectorAll('#sidebar-nav button');
             navButtons.forEach(btn => {
                 btn.classList.remove('bg-white/10', 'text-amber-300', 'font-bold', 'border-amber-400');
                 btn.classList.add('text-white/80', 'font-semibold', 'border-transparent');
             });
 
-            // 3. Highlight selected button and make target content viewable
             buttonElement.classList.remove('text-white/80', 'font-semibold', 'border-transparent');
             buttonElement.classList.add('bg-white/10', 'text-amber-300', 'font-bold', 'border-amber-400');
 
@@ -283,10 +304,50 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 document.getElementById('view-kelola-content').classList.remove('hidden');
                 document.getElementById('view-title').textContent = "Kelola Laporan Masuk";
                 document.getElementById('view-subtitle').textContent = "Daftar berkas keluhan dan laporan fasilitas pariwisata daerah.";
+                
+                // Default fallback to "All" whenever view initializes
+                const allTabButton = document.querySelector('#tab-filter-bar button');
+                if(allTabButton) filterTableCategory('ALL', allTabButton);
             }
         }
 
-        // Lightbox Functions
+        // 2. NEW REAL-TIME TABLE ROW FILTER ENGINE
+        function filterTableCategory(targetCategory, tabButton) {
+            // Adjust active tab design colors
+            const tabButtons = document.querySelectorAll('#tab-filter-bar button');
+            tabButtons.forEach(btn => {
+                btn.className = "px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition";
+            });
+            tabButton.className = "px-4 py-2 bg-[#4a2c1d] text-white text-xs font-bold rounded-xl shadow-sm transition";
+
+            const rows = document.querySelectorAll('.report-data-row');
+            let visibleRowsCount = 0;
+
+            rows.forEach(row => {
+                const rowCategory = row.getAttribute('data-category');
+                
+                if (targetCategory === 'ALL' || rowCategory === targetCategory) {
+                    row.classList.remove('hidden');
+                    visibleRowsCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            // Toggle empty placeholder if no matches found
+            const tableCard = document.getElementById('table-card-wrapper');
+            const placeholder = document.getElementById('empty-table-placeholder');
+            
+            if (visibleRowsCount === 0) {
+                tableCard.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            } else {
+                tableCard.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+        }
+
+        // Lightbox Modals 
         function openPhotoModal(element) {
             const rawData = element.getAttribute('data-photo');
             if(!rawData) return;
