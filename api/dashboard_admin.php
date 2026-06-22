@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_admin.php
- * Updated: SPA Layout with Dynamic Tab Filtering (All, Fasilitas, Kebersihan, Pelayanan, Parkir)
+ * Updated: SPA Layout with Dynamic Tab Filtering (All, Fasilitas, Kebersihan, Pelayanan, Keamanan)
  */
 include 'koneksi.php';
 
@@ -177,8 +177,8 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 <button onclick="filterTableCategory('PELAYANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
                     🛎️ Pelayanan
                 </button>
-                <button onclick="filterTableCategory('PARKIR', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
-                    🚗 Parkir
+                <button onclick="filterTableCategory('KEAMANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
+                    🚗 Keamanan
                 </button>
             </div>
 
