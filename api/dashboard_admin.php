@@ -1,8 +1,7 @@
 <?php
 /**
  * dashboard_admin.php
- * Fully Updated: Imgur Image Integration, Diterima/Tidak Diterima Workflow, Categories,
- * Interactive Response Modals, and Crash Protection.
+ * Optimized: Crash Protection, Lazy Payload Execution, and Interactive Modals
  */
 include 'koneksi.php';
 
@@ -15,7 +14,7 @@ if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true' || $_COO
 // Get display name from cookie
 $current_user = $_COOKIE['username'] ?? 'Admin';
 
-// 2. Fetch Dynamic Dashboard Metrics (Wrapped in validation helpers to prevent boolean errors)
+// 2. Fetch Dynamic Dashboard Metrics
 $total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan");
 if (!$total_q) {
     die("<div style='color:red; font-family:sans-serif; padding:20px; background:#ffebee; border-radius:10px; margin:20px;'>".
@@ -24,17 +23,15 @@ if (!$total_q) {
 $total_reports = mysqli_fetch_assoc($total_q)['total'] ?? 0;
 
 $accepted_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Diterima'");
-if (!$accepted_q) { $accepted_reports = 0; }
-else { $accepted_reports = mysqli_fetch_assoc($accepted_q)['total'] ?? 0; }
+$accepted_reports = (!$accepted_q) ? 0 : (mysqli_fetch_assoc($accepted_q)['total'] ?? 0);
 
-$pending_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Proses' OR status='Menunggu'");
-if (!$pending_q) { $pending_reports = 0; }
-else { $pending_reports = mysqli_fetch_assoc($pending_q)['total'] ?? 0; }
+$pending_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Proses' OR status='Menunggu' OR status='Diproses'");
+$pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] ?? 0);
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
-// Fetch all entry reports ordered by latest submission
-$all_reports = mysqli_query($koneksi, "SELECT * FROM laporan ORDER BY tanggal_laporan DESC");
+// CRITICAL FIX: Fetch metadata first, keep payload handled efficiently
+$all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_wisata, kategori, gps_koordinat, isi_laporan, status, tanggal_laporan, tanggapan_admin, foto FROM laporan ORDER BY tanggal_laporan DESC");
 if (!$all_reports) {
     die("<div style='color:red; font-family:sans-serif; padding:20px; background:#ffebee; border-radius:10px; margin:20px;'>".
         "<h3>❌ Failed to fetch Laporan List</h3><strong>Error:</strong> " . mysqli_error($koneksi) . "</div>");
@@ -100,15 +97,14 @@ if (!$all_reports) {
                                 <tr class="hover:bg-orange-50/30 transition-colors">
                                     
                                     <td class="p-4 align-top">
-                                        <?php if(!empty($row['foto']) && is_string($row['foto'])): ?>
-                                            <?php 
-                                            $imgUrl = (strpos($row['foto'], 'data:image') === 0 || strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; 
-                                            ?>
-                                            <a href="<?= $imgUrl; ?>" target="_blank">
-                                                <img src="<?= $imgUrl; ?>" 
-                                                     class="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm"
-                                                     onerror="this.src='https://placehold.co/150x150?text=No+Image'">
-                                            </a>
+                                        <?php if(!empty($row['foto'])): ?>
+                                            <div class="relative w-16 h-16 cursor-pointer group" onclick="openPhotoModal(this)" data-photo="<?= htmlspecialchars($row['foto']); ?>">
+                                                <img src="<?= (strpos($row['foto'], 'data:image') === 0 || strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; ?>" 
+                                                     class="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm group-hover:opacity-80 transition"
+                                                     loading="lazy"
+                                                     onerror="this.src='https://placehold.co/150x150?text=Bukti+Foto'">
+                                                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center text-white text-[9px] font-bold transition">Buka</div>
+                                            </div>
                                         <?php else: ?>
                                             <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">No Image</div>
                                         <?php endif; ?>
@@ -129,7 +125,7 @@ if (!$all_reports) {
                                             <?php if(!empty($row['gps_koordinat'])): ?>
                                                 <a href="https://www.openstreetmap.org/search?query=<?= urlencode($row['gps_koordinat']); ?>" target="_blank" 
                                                    class="bg-blue-50 text-blue-600 hover:underline font-bold px-2 py-0.5 rounded text-[9px] flex items-center gap-1">
-                                                    🗺️ Lihat di Peta
+                                                   🗺️ Lihat di Peta
                                                 </a>
                                             <?php endif; ?>
                                         </div>
@@ -158,7 +154,7 @@ if (!$all_reports) {
                                         elseif ($statusVal === 'Tidak Diterima' || $statusVal === 'Ditolak') { $badgeStyle = "bg-red-50 text-red-700 border-red-200"; }
                                         ?>
                                         <span class="px-2 py-1 <?= $badgeStyle; ?> rounded-full text-[9px] font-black border uppercase tracking-wider">
-                                            <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses') ? 'Proses' : $statusVal); ?>
+                                            <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses' || $statusVal === 'Diproses') ? 'Proses' : $statusVal); ?>
                                         </span>
                                     </td>
 
@@ -210,5 +206,43 @@ if (!$all_reports) {
             </div>
         </div>
     </div>
+
+    <div id="photoModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4 transition-all opacity-0 duration-300" onclick="closePhotoModal()">
+        <div class="relative max-w-3xl w-full max-h-[85vh] flex items-center justify-center" onclick="event.stopPropagation()">
+            <button class="absolute -top-10 right-0 text-white font-bold text-sm bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition" onclick="closePhotoModal()">✕ Tutup</button>
+            <img id="modalTargetImg" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10">
+        </div>
+    </div>
+
+    <script>
+        function openPhotoModal(element) {
+            const rawData = element.getAttribute('data-photo');
+            if(!rawData) return;
+            
+            const targetImg = document.getElementById('modalTargetImg');
+            const modal = document.getElementById('photoModal');
+            
+            // If the raw image isn't a base64 or external url link, route to fallback path cleanly
+            if(rawData.indexOf('data:image') !== 0 && rawData.indexOf('http') !== 0) {
+                targetImg.src = '../uploads/' + rawData;
+            } else {
+                targetImg.src = rawData;
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.classList.add('opacity-100'); }, 10);
+        }
+
+        function closePhotoModal() {
+            const modal = document.getElementById('photoModal');
+            modal.classList.remove('opacity-100');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+                document.getElementById('modalTargetImg').src = '';
+            }, 300);
+        }
+    </script>
 </body>
 </html>
