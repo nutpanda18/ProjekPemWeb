@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_user.php
- * Automated EXIF GPS Data Extraction from Captured Photos
+ * Automated EXIF GPS Data Extraction with Base64 Cloud Bypass
  */
 include 'koneksi.php'; 
 include 'api.php'; 
@@ -100,9 +100,13 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                     <tr class="hover:bg-orange-50/30 transition">
                                         <td class="p-4 align-top">
                                             <?php if(!empty($r['foto'])): ?>
-                                                <a href="<?= (strpos($r['foto'], 'http') === 0) ? $r['foto'] : 'uploads/'.$r['foto']; ?>" target="_blank">
-                                                    <img src="<?= (strpos($r['foto'], 'http') === 0) ? $r['foto'] : 'uploads/'.$r['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-orange-200 shadow-sm">
-                                                </a>
+                                                <?php if(strpos($r['foto'], 'data:image') === 0 || strpos($r['foto'], 'http') === 0): ?>
+                                                    <img src="<?= $r['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-orange-200 shadow-sm cursor-pointer" onclick="window.open(this.src)">
+                                                <?php else: ?>
+                                                    <a href="uploads/<?= $r['foto']; ?>" target="_blank">
+                                                        <img src="uploads/<?= $r['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-orange-200 shadow-sm">
+                                                    </a>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">N/A</div>
                                             <?php endif; ?>
@@ -149,7 +153,9 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
             <div class="glass-card bg-white p-6 rounded-3xl shadow-xl border-t-8 border-orange-600 h-fit sticky top-24">
                 <h3 class="font-bold text-orange-900 mb-6 text-center text-xl">Buat Pengaduan</h3>
                 
-                <form action="proses_simpan.php" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <form action="proses_simpan.php" method="POST" class="space-y-4">
+                    <input type="hidden" name="foto_base64" id="foto_base64">
+
                     <div>
                         <label class="text-[9px] font-bold text-gray-400 uppercase">Pelapor</label>
                         <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold outline-none" readonly>
@@ -206,9 +212,8 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     <div class="bg-orange-50 p-4 rounded-xl border border-dashed border-orange-200">
                         <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Ambil Foto Bukti (Kamera HP)</label>
                         <input type="file" 
-                               name="foto" 
                                id="cameraField" 
-                               accept="image/jpeg, image/jpg" 
+                               accept="image/jpeg, image/jpg, image/png" 
                                capture="environment" 
                                required
                                class="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer">
@@ -248,6 +253,14 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
             document.getElementById('geo_status').innerText = "Memproses metadata file foto...";
             document.getElementById('geo_status').className = "text-[10px] text-amber-600 mt-1 font-bold animate-pulse";
 
+            // PIPELINE 1: Convert the photo into a Base64 string instantly for TiDB Submission
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                document.getElementById('foto_base64').value = reader.result;
+            }
+            reader.readAsDataURL(file);
+
+            // PIPELINE 2: Parse EXIF Geo-Coordinates
             EXIF.getData(file, function() {
                 const latData = EXIF.getTag(this, "GPSLatitude");
                 const latRef  = EXIF.getTag(this, "GPSLatitudeRef");
