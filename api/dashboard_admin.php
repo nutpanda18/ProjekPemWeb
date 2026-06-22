@@ -1,7 +1,7 @@
 <?php
 /**
  * dashboard_admin.php
- * Updated: SPA Layout with Dynamic Tab Filtering (All, Fasilitas, Kebersihan, Pelayanan, Keamanan)
+ * Updated: Left Sidebar SPA Layout with Modern Chart.js Ringkasan Integration
  */
 include 'koneksi.php';
 
@@ -30,17 +30,35 @@ $pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
 // Fetch total counts grouped by category
+$category_labels = [];
+$category_values = [];
 $category_counts = [];
+
 $cat_q = mysqli_query($koneksi, "SELECT kategori, COUNT(*) as jumlah FROM laporan WHERE kategori IS NOT NULL AND kategori != '' GROUP BY kategori ORDER BY jumlah DESC");
 if ($cat_q) {
     while ($row_cat = mysqli_fetch_assoc($cat_q)) {
-        $category_counts[$row_cat['kategori']] = $row_cat['jumlah'];
+        $cat_name = strtoupper(trim($row_cat['kategori']));
+        $category_counts[$cat_name] = $row_cat['jumlah'];
+        $category_labels[] = $cat_name;
+        $category_values[] = (int)$row_cat['jumlah'];
     }
 }
 $top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
 
 // Fetch reports list
 $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_wisata, kategori, gps_koordinat, isi_laporan, status, tanggal_laporan, tanggapan_admin, foto FROM laporan ORDER BY tanggal_laporan DESC");
+
+// Fetch accounts for team management section
+$team_users = [];
+$user_table_check = mysqli_query($koneksi, "SHOW TABLES LIKE 'user'");
+if (mysqli_num_rows($user_table_check) > 0) {
+    $users_q = mysqli_query($koneksi, "SELECT id, username, role FROM user ORDER BY role ASC, username ASC");
+    if ($users_q) {
+        while ($u_row = mysqli_fetch_assoc($users_q)) {
+            $team_users[] = $u_row;
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -50,13 +68,16 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Laporan Wisata Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for beautiful analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .dashboard-view { transition: opacity 0.2s ease-in-out; }
     </style>
 </head>
-<body class="bg-[#fffaf5] text-stone-800 min-h-screen flex flex-row overflow-x-hidden">
+<body class="bg-[#fcf8f5] text-stone-800 min-h-screen flex flex-row overflow-x-hidden">
 
-    <aside class="w-72 bg-[#4a2c1d] text-white flex flex-col justify-between p-6 shrink-0 shadow-xl min-h-screen sticky top-0">
+    <!-- FIXED LEFT SIDEBAR PANEL -->
+    <aside class="w-72 bg-[#3e2316] text-white flex flex-col justify-between p-6 shrink-0 shadow-xl min-h-screen sticky top-0">
         <div class="space-y-8">
             <div class="border-b border-white/10 pb-4">
                 <h1 class="font-black text-xl flex items-center gap-2 tracking-wide text-amber-100">🍂 AdminPanel</h1>
@@ -67,15 +88,19 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 mb-2">Main Menu</p>
                 
                 <button onclick="switchView('ringkasan', this)" id="btn-ringkasan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-amber-300 bg-white/10 border-l-4 border-amber-400 text-left transition-all shadow-inner">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M520-600v-240h320v240H520ZM120-440v-400h320v400H120Zm400 320v-400h320v400H520Zm-400 0v-240h320v240H120Zm80-400h160v-240H200v240Zm400 320h160v-240H600v240Zm0-480h160v-80H600v80ZM200-200h160v-80H200v80Zm160-320Zm240-160Zm0 240ZM360-280Z"/></svg> Ringkasan Data Laporan
+                    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M520-600v-240h320v240H520ZM120-440v-400h320v400H120Zm400 320v-400h320v400H520Zm-400 0v-240h320v240H120Zm80-400h160v-240H200v240Zm400 320h160v-240H600v240Zm0-480h160v-80H600v80ZM200-200h160v-80H200v80Z"/></svg> Ringkasan Data Laporan
                 </button>
                 
                 <button onclick="switchView('kelola', this)" id="btn-kelola" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 border-l-4 border-transparent text-left transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M280-280h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Zm-80 480q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/></svg> Kelola Laporan
+                    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M280-280h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Zm-80 480q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg> Kelola Laporan
+                </button>
+
+                <button onclick="switchView('karyawan', this)" id="btn-karyawan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 border-l-4 border-transparent text-left transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M400-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM80-160v-112q0-33 17-62t47-44q51-26 115-44t141-18q77 0 141 18t115 44q30 15 47 44t17 62v112H80Z"/></svg> Kelola Pengguna Tim
                 </button>
 
                 <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 pt-4 mb-2">Aksi Eksternal</p>
-                <a href="/api/Tentang.php" target="_blank" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-amber-200/70 hover:text-white transition">Tentang</a>
+                <a href="/api/Home.php" target="_blank" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-amber-200/70 hover:text-white transition">🌐 Landing Page</a>
             </nav>
         </div>
 
@@ -88,6 +113,7 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
         </div>
     </aside>
 
+    <!-- RIGHT MAIN CONTENT CONTENT BODY -->
     <main class="flex-1 p-8 lg:p-12 max-w-7xl overflow-y-auto">
         
         <header class="flex items-center justify-between border-b border-stone-200 pb-6 mb-10">
@@ -100,97 +126,124 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
             </div>
         </header>
 
+        <!-- ================= VIEW 1: RINGKASAN & CHART ANALYTICS ================= -->
         <div id="view-ringkasan-content" class="dashboard-view space-y-8">
+            
+            <!-- Quick Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-stone-400">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase">Total Laporan Masuk</p>
-                    <h2 class="text-4xl font-black text-stone-800 mt-1"><?= $total_reports; ?></h2>
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Laporan</p>
+                        <h2 class="text-4xl font-black text-stone-800 mt-1"><?= $total_reports; ?></h2>
+                    </div>
+                    <div class="p-3 bg-stone-100 rounded-2xl text-xl">📁</div>
                 </div>
-                <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-amber-500">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase">Dalam Proses Evaluasi</p>
-                    <h2 class="text-4xl font-black text-amber-500 mt-1"><?= $pending_reports; ?></h2>
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dalam Proses</p>
+                        <h2 class="text-4xl font-black text-amber-600 mt-1"><?= $pending_reports; ?></h2>
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded-2xl text-xl">⏳</div>
                 </div>
-                <div class="bg-white p-6 rounded-[2rem] shadow-sm border-l-8 border-green-500">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase">Laporan Diterima (Valid)</p>
-                    <h2 class="text-4xl font-black text-green-600 mt-1"><?= $accepted_reports; ?></h2>
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Laporan Selesai</p>
+                        <h2 class="text-4xl font-black text-emerald-600 mt-1"><?= $accepted_reports; ?></h2>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-2xl text-xl">✅</div>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-100/70">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-stone-100">
-                    <div>
-                        <h3 class="font-bold text-stone-900 text-sm flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="m260-520 220-360 220 360H260ZM700-80q-75 0-127.5-52.5T520-260q0-75 52.5-127.5T700-440q75 0 127.5 52.5T880-260q0 75-52.5 127.5T700-80Zm-580-20v-320h320v320H120Zm580-60q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm-500-20h160v-160H200v160Zm202-420h156l-78-126-78 126Zm78 0ZM360-340Zm340 80Z"/></svg> Distribusi Kategori Keluhan</h3>
-                        <p class="text-[11px] text-stone-400">Total data laporan yang terkumpul di database berdasarkan label kategori.</p>
-                    </div>
-                    <?php if(!empty($category_counts)): ?>
-                        <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 flex items-center gap-2 text-xs">
-                            <span class="animate-pulse">⚠️</span>
-                            <span class="text-stone-600">Tren Keluhan Tertinggi: <strong class="text-amber-800 uppercase tracking-wide"><?= htmlspecialchars($top_category); ?></strong></span>
-                        </div>
-                    <?php endif; ?>
-                </div>
+            <!-- Chart & breakdown split layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 
+                <!-- Chart Panel -->
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 lg:col-span-3 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-stone-900 text-sm">📊 Proporsi Kategori Keluhan</h3>
+                        <p class="text-[11px] text-stone-400 mb-6">Visualisasi persentase pengaduan masuk.</p>
+                    </div>
+                    <div class="relative max-w-[280px] mx-auto w-full pb-4">
+                        <?php if(empty($category_counts)): ?>
+                            <div class="text-center py-12 text-xs text-stone-400 italic">Data Chart Belum Tersedia</div>
+                        <?php else: ?>
+                            <canvas id="categoryDoughnutChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Progress Metric Panel -->
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 lg:col-span-2 flex flex-col justify-between space-y-6">
+                    <div>
+                        <h3 class="font-bold text-stone-900 text-sm">📈 Penyelesaian Kasus</h3>
+                        <p class="text-[11px] text-stone-400 mb-4">Rasio efisiensi penanganan pengaduan valid.</p>
+                        
+                        <div class="bg-[#fffaf5] border border-orange-100/50 p-4 rounded-2xl mt-2">
+                            <div class="flex justify-between text-xs font-bold mb-2">
+                                <span class="text-stone-600">Laporan Terverifikasi</span>
+                                <span class="text-emerald-600 font-extrabold"><?= round($efficiency); ?>%</span>
+                            </div>
+                            <div class="w-full bg-stone-200/60 h-2.5 rounded-full overflow-hidden">
+                                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: <?= $efficiency; ?>%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-[10px] uppercase tracking-wider text-stone-400 font-bold mb-2">Tren Terbanyak</h4>
+                        <?php if(!empty($category_counts)): ?>
+                            <div class="bg-amber-50/60 border border-amber-200/60 rounded-xl p-3 flex items-center gap-2.5 text-xs">
+                                <span class="text-lg">🔥</span>
+                                <span class="text-stone-700">Kategori <strong class="text-amber-900 uppercase"><?= htmlspecialchars($top_category); ?></strong> mendominasi laporan masuk.</span>
+                            </div>
+                        <?php else: ?>
+                            <p class="text-xs text-stone-400 italic">Belum ada statistik laporan.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clean Table Breakdown underneath -->
+            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100">
+                <h3 class="font-bold text-stone-900 text-sm mb-4">📋 Rincian Data Angka Kategori</h3>
                 <?php if(empty($category_counts)): ?>
-                    <p class="text-xs text-stone-400 italic text-center py-2">Belum ada data laporan kategori terkumpul.</p>
+                    <p class="text-xs text-stone-400 italic text-center py-2">Belum ada data terkumpul.</p>
                 <?php else: ?>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <?php foreach($category_counts as $cat_name => $count): ?>
-                            <div class="bg-[#fffaf5] border border-orange-100/50 p-4 rounded-2xl flex flex-col justify-between">
-                                <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400 block truncate" title="<?= htmlspecialchars($cat_name); ?>">
-                                    <?= htmlspecialchars($cat_name); ?>
-                                </span>
+                            <div class="bg-[#fcfcfc] border border-stone-200/50 p-4 rounded-xl">
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-stone-400 block truncate"><?= htmlspecialchars($cat_name); ?></span>
                                 <div class="flex items-baseline justify-between mt-1">
-                                    <span class="text-2xl font-black text-stone-800"><?= $count; ?></span>
-                                    <span class="text-[10px] text-stone-400 font-medium">laporan</span>
+                                    <span class="text-xl font-black text-stone-800"><?= $count; ?></span>
+                                    <span class="text-[10px] text-stone-400 font-medium">Laporan</span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
             </div>
-
-            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-orange-50 max-w-xl">
-                <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">Efisiensi Penanganan Keluhan</p>
-                <div class="flex justify-between text-xs font-bold mb-2">
-                    <span>Laporan Terverifikasi Valid</span>
-                    <span class="text-green-600"><?= round($efficiency); ?>%</span>
-                </div>
-                <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div class="bg-green-500 h-full transition-all duration-500" style="width: <?= $efficiency; ?>%"></div>
-                </div>
-            </div>
         </div>
 
+        <!-- ================= VIEW 2: KELOLA LAPORAN TABLE ================= -->
         <div id="view-kelola-content" class="dashboard-view hidden space-y-6">
-            
             <div class="flex flex-wrap items-center gap-2 border-b border-stone-200 pb-3" id="tab-filter-bar">
-                <button onclick="filterTableCategory('ALL', this)" class="px-4 py-2 bg-[#4a2c1d] text-white text-xs font-bold rounded-xl shadow-sm transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M240-320h320v-80H240v80Zm0-160h480v-80H240v80Zm-80 320q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/></svg> Semua Laporan
-                </button>
-                <button onclick="filterTableCategory('FASILITAS', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M440-80v-520H80l400-280 400 280H520v520h-80Zm40-600h146-292 146ZM120-80v-210L88-466l78-14 30 160h164v240h-80v-160h-80v160h-80Zm480 0v-240h164l30-160 78 14-32 176v210h-80v-160h-80v160h-80ZM334-680h292L480-782 334-680Z"/></svg> Fasilitas
-                </button>
-                <button onclick="filterTableCategory('KEBERSIHAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M120-40v-280q0-83 58.5-141.5T320-520h40v-320q0-33 23.5-56.5T440-920h80q33 0 56.5 23.5T600-840v320h40q83 0 141.5 58.5T840-320v280H120Zm80-80h80v-120q0-17 11.5-28.5T320-280q17 0 28.5 11.5T360-240v120h80v-120q0-17 11.5-28.5T480-280q17 0 28.5 11.5T520-240v120h80v-120q0-17 11.5-28.5T640-280q17 0 28.5 11.5T680-240v120h80v-200q0-50-35-85t-85-35H320q-50 0-85 35t-35 85v200Zm320-400v-320h-80v320h80Zm0 0h-80 80Z"/></svg> Kebersihan
-                </button>
-                <button onclick="filterTableCategory('PELAYANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M400-80v-80h520v80H400Zm40-120q0-81 51-141.5T620-416v-25q0-17 11.5-28.5T660-481q17 0 28.5 11.5T700-441v25q77 14 128.5 74.5T880-200H440Zm105-81h228q-19-27-48.5-43.5T660-341q-36 0-66 16.5T545-281Zm114 0ZM40-440v-440h240v58l280-78 320 100v40q0 50-35 85t-85 35h-80v24q0 25-14.5 45.5T628-541L358-440H40Zm80-80h80v-280h-80v280Zm160 0h64l232-85q11-4 17.5-13.5T600-640h-71l-117 38-24-76 125-42h247q9 0 22.5-6.5T796-742l-238-74-278 76v220Z"/></svg> Pelayanan
-                </button>
-                <button onclick="filterTableCategory('KEAMANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#000000"><path d="M420-340h120v-100h100v-120H540v-100H420v100H320v120h100v100Zm60 260q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Z"/></svg> Keamanan
-                </button>
+                <button onclick="filterTableCategory('ALL', this)" class="px-4 py-2 bg-[#3e2316] text-white text-xs font-bold rounded-xl shadow-sm transition">Semua Laporan</button>
+                <button onclick="filterTableCategory('FASILITAS', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">🧱 Fasilitas</button>
+                <button onclick="filterTableCategory('KEBERSIHAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">✨ Kebersihan</button>
+                <button onclick="filterTableCategory('PELAYANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">🛎️ Pelayanan</button>
+                <button onclick="filterTableCategory('KEAMANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">🛡️ Keamanan</button>
             </div>
 
-            <div id="empty-table-placeholder" class="hidden bg-white p-12 text-center rounded-[2rem] border border-orange-50 shadow-sm">
+            <div id="empty-table-placeholder" class="hidden bg-white p-12 text-center rounded-[2rem] border border-stone-100 shadow-sm">
                 <span class="text-4xl">🍃</span>
                 <h4 class="font-bold text-stone-700 mt-2 text-sm">Tidak Ada Laporan</h4>
                 <p class="text-xs text-stone-400 mt-0.5">Belum ditemukan berkas pengaduan dalam kategori ini.</p>
             </div>
 
-            <div id="table-card-wrapper" class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-orange-50">
+            <div id="table-card-wrapper" class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-stone-100">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left table-auto">
-                        <thead class="bg-[#5c3d2e] text-white font-bold uppercase text-xs">
+                        <thead class="bg-[#523324] text-white font-bold uppercase text-xs">
                             <tr>
                                 <th class="p-4 w-24">Bukti Foto</th> 
                                 <th class="p-4">Detail Informasi Keluhan</th>
@@ -198,48 +251,41 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                 <th class="p-4 text-center">Aksi Moderasi</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-orange-50 text-xs" id="reports-table-body">
+                        <tbody class="divide-y divide-stone-100 text-xs" id="reports-table-body">
                             <?php while($row = mysqli_fetch_assoc($all_reports)): 
                                 $rowCatClean = strtoupper(trim($row['kategori'] ?? 'UMUM'));
                             ?>
-                            <tr class="hover:bg-orange-50/30 transition-colors report-data-row" data-category="<?= htmlspecialchars($rowCatClean); ?>">
-                                
+                            <tr class="hover:bg-stone-50/40 transition-colors report-data-row" data-category="<?= htmlspecialchars($rowCatClean); ?>">
                                 <td class="p-4 align-top">
                                     <?php if(!empty($row['foto'])): ?>
                                         <div class="relative w-16 h-16 cursor-pointer group" onclick="openPhotoModal(this)" data-photo="<?= htmlspecialchars($row['foto']); ?>">
-                                            <img src="<?= (strpos($row['foto'], 'data:image') === 0 || strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; ?>" 
-                                                 class="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm"
-                                                 loading="lazy"
-                                                 onerror="this.src='https://placehold.co/150x150?text=Foto'">
+                                            <img src="<?= (strpos($row['foto'], 'data:image') === 0 || strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm" loading="lazy">
                                         </div>
                                     <?php else: ?>
                                         <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">No Image</div>
                                     <?php endif; ?>
                                 </td>
-
                                 <td class="p-4 align-top space-y-2">
                                     <div class="flex flex-col gap-0.5">
                                         <span class="text-[10px] text-gray-400 font-medium"><?= $row['tanggal_laporan']; ?></span>
-                                        <span class="font-black text-orange-900 text-sm"><?= htmlspecialchars($row['lokasi_wisata'] ?? ''); ?></span>
+                                        <span class="font-black text-stone-900 text-sm"><?= htmlspecialchars($row['lokasi_wisata'] ?? ''); ?></span>
                                         <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor'] ?? ''); ?></span>
                                     </div>
                                     <div class="flex flex-wrap gap-2 items-center">
-                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide category-badge"><?= htmlspecialchars($row['kategori'] ?? 'UMUM'); ?></span>
+                                        <span class="bg-stone-100 text-stone-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide"><?= htmlspecialchars($row['kategori'] ?? 'UMUM'); ?></span>
                                         <?php if(!empty($row['gps_koordinat'])): ?>
                                             <a href="https://www.openstreetmap.org/search?query=<?= urlencode($row['gps_koordinat']); ?>" target="_blank" class="bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded text-[9px]">🗺️ Peta</a>
                                         <?php endif; ?>
                                     </div>
                                     <p class="text-stone-600 bg-stone-50/80 p-2 rounded-xl italic">"<?= htmlspecialchars($row['isi_laporan'] ?? ''); ?>"</p>
-                                    
                                     <div class="mt-3 pt-2">
                                         <form action="simpan_tanggapan.php" method="POST" class="flex gap-2">
                                             <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>">
-                                            <input type="text" name="tanggapan_admin" placeholder="Tanggapan perbaikan..." value="<?= htmlspecialchars($row['tanggapan_admin'] ?? ''); ?>" class="w-full px-3 py-1.5 bg-stone-50 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-orange-500">
+                                            <input type="text" name="tanggapan_admin" placeholder="Tanggapan perbaikan..." value="<?= htmlspecialchars($row['tanggapan_admin'] ?? ''); ?>" class="w-full px-3 py-1.5 bg-stone-50 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500">
                                             <button type="submit" class="bg-stone-900 text-white font-bold px-3 py-1.5 rounded-xl text-[10px]">Balas</button>
                                         </form>
                                     </div>
                                 </td>
-
                                 <td class="p-4 align-top text-center whitespace-nowrap">
                                     <?php 
                                     $statusVal = $row['status'] ?? 'Menunggu';
@@ -251,17 +297,10 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                         <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses') ? 'Proses' : $statusVal); ?>
                                     </span>
                                 </td>
-
                                 <td class="p-4 align-top">
                                     <div class="flex flex-col gap-1.5">
-                                        <form action="update_status.php" method="POST">
-                                            <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Diterima">
-                                            <button type="submit" class="w-full bg-green-600 text-white py-1 rounded-lg font-black text-[9px] uppercase">Terima</button>
-                                        </form>
-                                        <form action="update_status.php" method="POST">
-                                            <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima">
-                                            <button type="submit" class="w-full bg-amber-600 text-white py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
-                                        </form>
+                                        <form action="update_status.php" method="POST"><input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Diterima"><button type="submit" class="w-full bg-green-600 text-white py-1 rounded-lg font-black text-[9px] uppercase">Terima</button></form>
+                                        <form action="update_status.php" method="POST"><input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima"><button type="submit" class="w-full bg-amber-600 text-white py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button></form>
                                         <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-red-600 text-white text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
                                     </div>
                                 </td>
@@ -272,19 +311,105 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 </div>
             </div>
         </div>
+
+        <!-- ================= VIEW 3: USER/TEAM MANAGEMENT PANEL ================= -->
+        <div id="view-karyawan-content" class="dashboard-view hidden space-y-6">
+            <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-stone-100">
+                <div class="p-6 border-b border-stone-100">
+                    <h3 class="font-bold text-stone-900 text-sm">Daftar Akun Pengguna Platform</h3>
+                    <p class="text-[11px] text-stone-400">Seluruh akun yang terdaftar pada sistem pengaduan pariwisata daerah Madiun.</p>
+                </div>
+                
+                <?php if(empty($team_users)): ?>
+                    <div class="p-8 text-center text-xs text-stone-400 italic">Data tabel `user` kosong atau tidak ditemukan.</div>
+                <?php else: ?>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left table-auto">
+                            <thead class="bg-[#523324] text-white font-bold uppercase text-xs">
+                                <tr>
+                                    <th class="p-4">ID Pengguna</th>
+                                    <th class="p-4">Username</th>
+                                    <th class="p-4 text-center">Hak Akses / Role</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100 text-xs">
+                                <?php foreach($team_users as $user_row): ?>
+                                <tr class="hover:bg-stone-50/40 transition-colors">
+                                    <td class="p-4 font-mono font-bold text-stone-400">#<?= $user_row['id']; ?></td>
+                                    <td class="p-4 font-black text-stone-800"><?= htmlspecialchars($user_row['username']); ?></td>
+                                    <td class="p-4 text-center">
+                                        <?php if(strtolower($user_row['role']) === 'admin'): ?>
+                                            <span class="px-3 py-1 bg-red-50 border border-red-200 text-red-700 rounded-full font-black uppercase tracking-wider text-[9px]">👑 Admin Sistem</span>
+                                        <?php else: ?>
+                                            <span class="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-full font-bold uppercase tracking-wider text-[9px]">👤 Pelapor / User</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
     </main>
 
+    <!-- FLOATING LIGHTBOX CONTAINER -->
     <div id="photoModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4" onclick="closePhotoModal()">
         <div class="relative max-w-3xl w-full" onclick="event.stopPropagation()">
             <img id="modalTargetImg" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl mx-auto shadow-2xl">
         </div>
     </div>
 
+    <!-- MAIN JAVASCRIPT LOGIC OPERATIONS -->
     <script>
-        // 1. Sidebar Link Switching Section View Engine
+        // Inject Dynamic Database data safely into ChartJS
+        const chartLabels = <?= json_encode($category_labels); ?>;
+        const chartDataValues = <?= json_encode($category_values); ?>;
+
+        document.addEventListener("DOMContentLoaded", function () {
+            if (chartLabels.length > 0) {
+                const ctx = document.getElementById('categoryDoughnutChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartDataValues,
+                            backgroundColor: [
+                                '#a8a29e', // FASILITAS
+                                '#d97706', // KEBERSIHAN
+                                '#f59e0b', // PELAYANAN
+                                '#78716c', // KEAMANAN
+                                '#e7e5e4'  // LAINNYA
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: { size: 10, family: 'sans-serif', weight: 'bold' },
+                                    color: '#444444'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
         function switchView(viewName, buttonElement) {
             document.getElementById('view-ringkasan-content').classList.add('hidden');
             document.getElementById('view-kelola-content').classList.add('hidden');
+            document.getElementById('view-karyawan-content').classList.add('hidden');
             
             const navButtons = document.querySelectorAll('#sidebar-nav button');
             navButtons.forEach(btn => {
@@ -297,34 +422,34 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
 
             if (viewName === 'ringkasan') {
                 document.getElementById('view-ringkasan-content').classList.remove('hidden');
-                document.getElementById('view-title').textContent = "Ringkasan Finansial & Performa";
-                document.getElementById('view-subtitle').textContent = "Berikut adalah ringkasan performa dan keluhan infrastruktur terkini.";
+                document.getElementById('view-title').textContent = "Ringkasan Data Laporan";
+                document.getElementById('view-subtitle').textContent = "Berikut adalah ringkasan data laporan.";
             } else if (viewName === 'kelola') {
                 document.getElementById('view-kelola-content').classList.remove('hidden');
                 document.getElementById('view-title').textContent = "Kelola Laporan Masuk";
                 document.getElementById('view-subtitle').textContent = "Daftar berkas keluhan dan laporan fasilitas pariwisata daerah.";
                 
-                // Default fallback to "All" whenever view initializes
                 const allTabButton = document.querySelector('#tab-filter-bar button');
                 if(allTabButton) filterTableCategory('ALL', allTabButton);
+            } else if (viewName === 'karyawan') {
+                document.getElementById('view-karyawan-content').classList.remove('hidden');
+                document.getElementById('view-title').textContent = "Kelola Pengguna Tim";
+                document.getElementById('view-subtitle').textContent = "Daftar hak akses administrator dan pelapor publik terdaftar.";
             }
         }
 
-        // 2. NEW REAL-TIME TABLE ROW FILTER ENGINE
         function filterTableCategory(targetCategory, tabButton) {
-            // Adjust active tab design colors
             const tabButtons = document.querySelectorAll('#tab-filter-bar button');
             tabButtons.forEach(btn => {
                 btn.className = "px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition";
             });
-            tabButton.className = "px-4 py-2 bg-[#4a2c1d] text-white text-xs font-bold rounded-xl shadow-sm transition";
+            tabButton.className = "px-4 py-2 bg-[#3e2316] text-white text-xs font-bold rounded-xl shadow-sm transition";
 
             const rows = document.querySelectorAll('.report-data-row');
             let visibleRowsCount = 0;
 
             rows.forEach(row => {
                 const rowCategory = row.getAttribute('data-category');
-                
                 if (targetCategory === 'ALL' || rowCategory === targetCategory) {
                     row.classList.remove('hidden');
                     visibleRowsCount++;
@@ -333,7 +458,6 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 }
             });
 
-            // Toggle empty placeholder if no matches found
             const tableCard = document.getElementById('table-card-wrapper');
             const placeholder = document.getElementById('empty-table-placeholder');
             
@@ -346,7 +470,6 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
             }
         }
 
-        // Lightbox Modals 
         function openPhotoModal(element) {
             const rawData = element.getAttribute('data-photo');
             if(!rawData) return;
