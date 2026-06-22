@@ -1,62 +1,84 @@
 <?php
 /**
  * proses_simpan.php
- * Handles image files and inserts auto-extracted coordinates.
+ * Fully Repaired Version: Auto-generates folders and parses automatic metadata coordinates safely.
  */
 include 'koneksi.php';
 
+// Turn on error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nama_pelapor   = mysqli_real_escape_string($koneksi, $_POST['nama_pelapor']);
-    $kategori       = mysqli_real_escape_string($koneksi, $_POST['kategori']);
-    $lokasi_wisata  = mysqli_real_escape_string($koneksi, $_POST['lokasi_wisata']);
-    $isi_laporan    = mysqli_real_escape_string($koneksi, $_POST['isi_laporan']);
-    $gps_koordinat  = mysqli_real_escape_string($koneksi, $_POST['gps_koordinat']);
+    // 1. Sanitize incoming text parameters
+    $nama_pelapor   = mysqli_real_escape_string($koneksi, $_POST['nama_pelapor'] ?? '');
+    $kategori       = mysqli_real_escape_string($koneksi, $_POST['kategori'] ?? '');
+    $lokasi_wisata  = mysqli_real_escape_string($koneksi, $_POST['lokasi_wisata'] ?? '');
+    $isi_laporan    = mysqli_real_escape_string($koneksi, $_POST['isi_laporan'] ?? '');
+    $gps_koordinat  = mysqli_real_escape_string($koneksi, $_POST['gps_koordinat'] ?? '');
     
-    // Set baseline status to 'Diproses'
+    // Set baseline statuses matching your project rules ("Diproses")
     $status         = 'Diproses'; 
     $tanggal        = date('Y-m-d H:i:s');
+    
+    // 2. SELF-REPAIRING FOLDER SETUP
     $targetDir      = "uploads/";
     
+    // Force build directory with full write permissions if missing
     if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0755, true);
+        mkdir($targetDir, 0777, true);
     }
 
-    $fileName       = basename($_FILES["foto"]["name"]);
-    $fileType       = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    
-    // Prevent collision overwrite bugs using timestamp formatting
-    $newFileName    = time() . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $fileName);
-    $targetFilePath = $targetDir . $newFileName;
+    // Check if file upload payload is present and without errors
+    if (isset($_FILES["foto"]) && $_FILES["foto"]["error"] == 0) {
+        $fileName       = basename($_FILES["foto"]["name"]);
+        $fileType       = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        
+        // Clean up special characters and prefix timestamp to make filename safe
+        $cleanFileName  = preg_replace("/[^a-zA-Z0-9.]/", "_", $fileName);
+        $newFileName    = time() . "_" . $cleanFileName;
+        $targetFilePath = $targetDir . $newFileName;
 
-    if (!empty($_FILES["foto"]["tmp_name"])) {
+        // Metadata validation constraints
         $allowedTypes = array('jpg', 'jpeg', 'png');
         if (!in_array($fileType, $allowedTypes)) {
-            echo "<script>alert('Error: Hanya file JPG, JPEG, & PNG yang diizinkan!'); window.history.back();</script>";
+            echo "<script>alert('Error: Format file salah! Hanya file JPG, JPEG, & PNG yang diizinkan.'); window.history.back();</script>";
             exit();
         }
 
-        if ($_FILES["foto"]["size"] > 5000000) {
-            echo "<script>alert('Error: Ukuran foto maksimal adalah 5MB.'); window.history.back();</script>";
+        if ($_FILES["foto"]["size"] > 10000000) { // Limit to 10MB for modern smartphone captures
+            echo "<script>alert('Error: Ukuran foto terlalu besar! Maksimal 10MB.'); window.history.back();</script>";
             exit();
         }
 
+        // Try moving the temporary file to the upload folder
         if (move_uploaded_file($_FILES["foto"]["tmp_name"], $targetFilePath)) {
-            // SQL statement reflecting your physical data structure
+            
+            // 3. Database Insertion
             $query = "INSERT INTO laporan (nama_pelapor, kategori, lokasi_wisata, isi_laporan, foto, gps_koordinat, status, tanggal_laporan) 
                       VALUES ('$nama_pelapor', '$kategori', '$lokasi_wisata', '$isi_laporan', '$newFileName', '$gps_koordinat', '$status', '$tanggal')";
             
             $insert = mysqli_query($koneksi, $query);
 
             if ($insert) {
-                echo "<script>alert('Laporan berhasil dikirim dengan koordinat otomatis!'); window.location.href='dashboard_user.php';</script>";
+                echo "<script>alert('Laporan berhasil terkirim dengan geo-tagging otomatis!'); window.location.href='dashboard_user.php';</script>";
+                exit();
             } else {
-                echo "<script>alert('Gagal menyimpan data ke database: " . mysqli_error($koneksi) . "'); window.history.back();</script>";
+                // If SQL fails, tell us exactly why (e.g. missing columns)
+                $dbError = mysqli_error($koneksi);
+                echo "<script>alert('Gagal simpan ke database! Error: " . addslashes($dbError) . "'); window.history.back();</script>";
+                exit();
             }
         } else {
-            echo "<script>alert('Gagal mengunggah file foto ke server.'); window.history.back();</script>";
+            // Check why move_uploaded_file failed
+            echo "<script>alert('Gagal mengunggah file foto ke server. Pastikan folder uploads/ memiliki izin tulis (write permissions).'); window.history.back();</script>";
+            exit();
         }
     } else {
-        echo "<script>alert('Wajib melampirkan foto bukti keluhan.'); window.history.back();</script>";
+        // Capture exact code error from PHP $_FILES array global
+        $errorCode = $_FILES["foto"]["error"] ?? 'File tidak terdeteksi';
+        echo "<script>alert('Gagal memproses file foto. Error Code PHP: " . $errorCode . "'); window.history.back();</script>";
+        exit();
     }
 } else {
     header("Location: dashboard_user.php");
