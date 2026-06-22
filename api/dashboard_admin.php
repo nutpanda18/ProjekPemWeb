@@ -110,7 +110,7 @@ if (mysqli_num_rows($user_table_check) > 0) {
     </aside>
 
     <!-- RIGHT MAIN CONTENT CONTENT BODY -->
-    <main class="flex-1 p-8 lg:p-12 max-w-7xl overflow-y-auto">
+    < class="flex-1 p-8 lg:p-12 max-w-7xl overflow-y-auto">
         
         <header class="flex items-center justify-between border-b border-stone-200 pb-6 mb-10">
             <div>
@@ -309,6 +309,8 @@ if (mysqli_num_rows($user_table_check) > 0) {
         </div>
 
         
+        
+    
 
     <!-- FLOATING LIGHTBOX CONTAINER -->
     <div id="photoModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4" onclick="closePhotoModal()">
@@ -364,7 +366,7 @@ if (mysqli_num_rows($user_table_check) > 0) {
         function switchView(viewName, buttonElement) {
             document.getElementById('view-ringkasan-content').classList.add('hidden');
             document.getElementById('view-kelola-content').classList.add('hidden');
-            document.getElementById('view-karyawan-content').classList.add('hidden');
+            
             
             const navButtons = document.querySelectorAll('#sidebar-nav button');
             navButtons.forEach(btn => {
