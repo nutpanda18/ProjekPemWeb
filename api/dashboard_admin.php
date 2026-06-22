@@ -73,9 +73,6 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                 <button onclick="switchView('kelola', this)" id="btn-kelola" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 border-l-4 border-transparent text-left transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M280-280h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Zm-80 480q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/></svg> Kelola Laporan
                 </button>
-
-                <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 pt-4 mb-2">Aksi Eksternal</p>
-                <a href="/api/Tentang.php" target="_blank" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-amber-200/70 hover:text-white transition">Tentang</a>
             </nav>
         </div>
 
@@ -256,13 +253,13 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                     <div class="flex flex-col gap-1.5">
                                         <form action="update_status.php" method="POST">
                                             <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Diterima">
-                                            <button type="submit" class="w-full bg-green-600 text-white py-1 rounded-lg font-black text-[9px] uppercase">Terima</button>
+                                            <button type="submit" class="w-full bg-[#d1fae5] text-[#065f46] py-1 rounded-lg font-black text-[9px] uppercase">Terima</button>
                                         </form>
                                         <form action="update_status.php" method="POST">
                                             <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima">
-                                            <button type="submit" class="w-full bg-amber-600 text-white py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
+                                            <button type="submit" class="w-full bg-[#fef3c7] text-[#d97706] py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
                                         </form>
-                                        <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-red-600 text-white text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
+                                        <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-[#fee2e2] text-[#991b1b] text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
                                     </div>
                                 </td>
                             </tr>
