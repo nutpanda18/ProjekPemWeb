@@ -95,10 +95,6 @@ if (mysqli_num_rows($user_table_check) > 0) {
                     <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M280-280h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Zm-80 480q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg> Kelola Laporan
                 </button>
 
-                <button onclick="switchView('karyawan', this)" id="btn-karyawan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 border-l-4 border-transparent text-left transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M400-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM80-160v-112q0-33 17-62t47-44q51-26 115-44t141-18q77 0 141 18t115 44q30 15 47 44t17 62v112H80Z"/></svg> Kelola Pengguna Tim
-                </button>
-
                 <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 pt-4 mb-2">Aksi Eksternal</p>
                 <a href="/api/Home.php" target="_blank" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-amber-200/70 hover:text-white transition">🌐 Landing Page</a>
             </nav>
@@ -160,7 +156,7 @@ if (mysqli_num_rows($user_table_check) > 0) {
                 <!-- Chart Panel -->
                 <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 lg:col-span-3 flex flex-col justify-between">
                     <div>
-                        <h3 class="font-bold text-stone-900 text-sm">📊 Proporsi Kategori Keluhan</h3>
+                        <h3 class="font-bold text-stone-900 text-sm">Proporsi Kategori Keluhan</h3>
                         <p class="text-[11px] text-stone-400 mb-6">Visualisasi persentase pengaduan masuk.</p>
                     </div>
                     <div class="relative max-w-[280px] mx-auto w-full pb-4">
@@ -312,48 +308,7 @@ if (mysqli_num_rows($user_table_check) > 0) {
             </div>
         </div>
 
-        <!-- ================= VIEW 3: USER/TEAM MANAGEMENT PANEL ================= -->
-        <div id="view-karyawan-content" class="dashboard-view hidden space-y-6">
-            <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-stone-100">
-                <div class="p-6 border-b border-stone-100">
-                    <h3 class="font-bold text-stone-900 text-sm">Daftar Akun Pengguna Platform</h3>
-                    <p class="text-[11px] text-stone-400">Seluruh akun yang terdaftar pada sistem pengaduan pariwisata daerah Madiun.</p>
-                </div>
-                
-                <?php if(empty($team_users)): ?>
-                    <div class="p-8 text-center text-xs text-stone-400 italic">Data tabel `user` kosong atau tidak ditemukan.</div>
-                <?php else: ?>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left table-auto">
-                            <thead class="bg-[#523324] text-white font-bold uppercase text-xs">
-                                <tr>
-                                    <th class="p-4">ID Pengguna</th>
-                                    <th class="p-4">Username</th>
-                                    <th class="p-4 text-center">Hak Akses / Role</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-stone-100 text-xs">
-                                <?php foreach($team_users as $user_row): ?>
-                                <tr class="hover:bg-stone-50/40 transition-colors">
-                                    <td class="p-4 font-mono font-bold text-stone-400">#<?= $user_row['id']; ?></td>
-                                    <td class="p-4 font-black text-stone-800"><?= htmlspecialchars($user_row['username']); ?></td>
-                                    <td class="p-4 text-center">
-                                        <?php if(strtolower($user_row['role']) === 'admin'): ?>
-                                            <span class="px-3 py-1 bg-red-50 border border-red-200 text-red-700 rounded-full font-black uppercase tracking-wider text-[9px]">👑 Admin Sistem</span>
-                                        <?php else: ?>
-                                            <span class="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-full font-bold uppercase tracking-wider text-[9px]">👤 Pelapor / User</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-    </main>
+        
 
     <!-- FLOATING LIGHTBOX CONTAINER -->
     <div id="photoModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4" onclick="closePhotoModal()">
