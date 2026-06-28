@@ -1,69 +1,86 @@
-/* General Layout */
-body {
+/* ==========================================================================
+   style_user.css
+   Isolated Stylesheet Component for Laporan Wisata Madiun (User Workspace)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* Typography & Core Background Resets */
+.app-body {
     background-color: #fffaf5;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.01em;
 }
 
-/* Custom Cards */
-.glass-card {
-    background: white;
-    border-radius: 2.5rem;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    border: 1px solid #fff7ed;
+/* Navbar Interface */
+.app-navbar {
+    background-color: #4a2c1d;
+    box-shadow: 0 4px 20px -2px rgba(74, 44, 29, 0.15);
 }
 
-
-.stat-orange {
-    background: linear-gradient(to bottom right, #f26a1d, #ff8c42);
-    width: 14rem;
-    padding: 1.5rem;
-    border-radius: 1.5rem;
-    color: white;
-    box-shadow: 0 10px 15px -3px rgba(242, 106, 29, 0.3);
+.nav-link {
+    color: rgba(255, 255, 255, 0.75);
 }
 
-
-.report-table-container {
-    background: white;
-    border-radius: 2rem;
-    overflow: hidden;
-    border: 1px solid #fff7ed;
+.nav-link:hover {
+    color: #fcd34d; /* Amber-300 */
 }
 
+/* Card Component Frameworks */
+.glass-card, .form-container-card {
+    background: #ffffff;
+    box-shadow: 0 10px 30px -10px rgba(74, 44, 29, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Component Section Headers Decorators */
+.decorator-bar {
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background-color: #ea580c; /* Orange Accent */
+    border-radius: 9999px;
+}
+
+/* Premium Dashboard Counters Display */
+.stat-premium-card {
+    box-shadow: 0 10px 25px -8px rgba(74, 44, 29, 0.04);
+}
+
+.stat-icon-wrapper {
+    box-shadow: inset 0 2px 4px 0 rgba(74, 44, 29, 0.02);
+}
+
+/* Table Design Configuration */
 .table-head {
     background-color: #5c3d2e;
-    color: white;
-    font-size: 0.625rem;
-    font-weight: 700;
+    color: #ffffff;
+}
+
+.table-head th {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
-/* Form Styling */
-.form-input {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #f9fafb;
-    border-radius: 0.75rem;
-    font-size: 0.75rem;
-    outline: none;
-    border: 1px solid transparent;
-}
-
-.form-input:focus {
-    border-color: #f26a1d;
+/* Upload & Submission Form Interfaces */
+.camera-upload-zone {
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.01);
 }
 
 .submit-btn {
-    width: 100%;
-    background-color: #f26a1d;
-    color: white;
-    padding: 1rem;
-    border-radius: 1rem;
-    font-weight: 700;
-    transition: all 0.2s;
+    background-color: #ea580c; /* Primary CTA Action */
+    box-shadow: 0 10px 20px -6px rgba(234, 88, 12, 0.3);
 }
 
 .submit-btn:hover {
     background-color: #c2410c;
+    box-shadow: 0 10px 25px -4px rgba(194, 65, 12, 0.4);
+}
+
+.submit-btn:disabled {
+    background-color: #d6d3d1;
+    box-shadow: none;
+    cursor: not-allowed;
 }

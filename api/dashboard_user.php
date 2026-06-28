@@ -37,124 +37,135 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard User - Madiun</title>
+    <title>Dashboard Pelapor - Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <link rel="stylesheet" href="style_user.css"> 
 </head>
-<body class="bg-stone-50">
+<body class="app-body min-h-screen flex flex-col">
 
-    <nav class="bg-[#4a2c1d] text-white shadow-lg sticky top-0 z-50">
+    <nav class="app-navbar text-white sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="font-bold text-xl tracking-tight">🍂 Laporan Keluhan Wisata Madiun</h1>
-            <div class="flex items-center space-x-6 text-sm">
-                <a href="/api/Home.php" class="hover:text-amber-400">Home</a>
-                <a href="/api/Tentang.php" class="hover:text-amber-400">Tentang</a>
-                <span class="text-amber-300 font-bold">Hi, <?= htmlspecialchars($currentUser); ?></span>
-                <a href="/api/Login.php?logout=true" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition">Logout</a>
+            <h1 class="font-black text-lg tracking-tight flex items-center gap-2">🍂 Laporan Wisata <span class="text-amber-300 font-medium text-xs bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Madiun</span></h1>
+            <div class="flex items-center space-x-6 text-xs font-semibold">
+                <a href="/api/Home.php" class="nav-link transition">Home</a>
+                <a href="/api/Tentang.php" class="nav-link transition">Tentang</a>
+                <span class="user-greeting border-l border-white/20 pl-6">Halo, <strong class="text-amber-300 font-bold"><?= htmlspecialchars($currentUser); ?></strong></span>
+                <a href="/api/Login.php?logout=true" class="logout-btn bg-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition shadow-sm">Keluar</a>
             </div>
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 py-10 max-w-6xl">
+    <div class="container mx-auto px-4 py-8 max-w-7xl flex-1">
         
-        <div class="relative rounded-[2.5rem] overflow-hidden shadow-xl mb-8 h-56">
-            <img src="https://static.promediateknologi.id/crop/0x0:0x0/0x0/webp/photo/p2/220/2024/04/04/CaptureJPG-1596998515.jpg" class="w-full h-full object-cover" alt="Madiun Hero">
-            <div class="absolute inset-0 bg-black/30 flex items-end p-10">
-                <h2 class="text-3xl font-bold text-white">Wisata Kota Madiun</h2>
+        <div class="jumbotron-banner relative rounded-[2rem] overflow-hidden shadow-sm mb-8 h-48">
+            <img src="https://static.promediateknologi.id/crop/0x0:0x0/0x0/webp/photo/p2/220/2024/04/04/CaptureJPG-1596998515.jpg" class="w-full h-full object-cover" alt="Madiun Hero Image">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
+                <p class="text-[10px] text-amber-300 uppercase tracking-widest font-black">Portal Layanan Pengaduan Masyarakat</p>
+                <h2 class="text-2xl font-black text-white tracking-tight mt-0.5">Selamat Datang di Pusat Layanan Keluhan Wisata</h2>
             </div>
         </div>
 
-        <div class="stat-orange mb-10 relative bg-white p-8 rounded-3xl shadow-md border-l-8 border-orange-500">
-            <p class="text-[10px] font-bold uppercase opacity-80 text-orange-800">Laporan Saya</p>
-            <h4 class="text-4xl font-black text-orange-950"><?= $total_data; ?></h4>
-            <span class="absolute right-8 top-1/2 -translate-y-1/2 text-5xl opacity-10">📂</span>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            <div class="lg:col-span-2 space-y-10">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            <div class="lg:col-span-2 space-y-8">
                 
-                <div class="glass-card bg-white p-6 rounded-3xl shadow-sm border border-orange-100">
-                    <h3 class="font-bold text-orange-900 mb-6 flex items-center gap-2">
-                        <span class="text-orange-600 text-2xl">|</span> Info Kategori Keluhan
+                <div class="stat-premium-card bg-white p-6 rounded-[2rem] flex items-center justify-between border border-stone-200/60 shadow-sm relative overflow-hidden">
+                    <div>
+                        <p class="text-[10px] font-black uppercase text-stone-400 tracking-wider">Total Laporan Kontribusi Anda</p>
+                        <h4 class="text-4xl font-black text-stone-900 mt-1"><?= $total_data; ?> <span class="text-xs font-bold text-stone-400">Berkas Pengaduan</span></h4>
+                    </div>
+                    <div class="stat-icon-wrapper bg-[#fffaf5] p-4 rounded-2xl text-2xl border border-orange-100">📂</div>
+                </div>
+
+                <div class="glass-card bg-white p-6 rounded-[2rem] shadow-sm border border-stone-200/60">
+                    <h3 class="section-title text-stone-900 mb-4 flex items-center gap-2 font-black text-sm">
+                        <span class="decorator-bar"></span> Panduan Label Klasifikasi Keluhan
                     </h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-xs">
-                            <span class="text-orange-700 font-bold block">📍 Fasilitas</span>
-                            <p class="text-stone-500">Toilet, Parkir, Bangku Jalan, Lampu, dll.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="category-info-box p-4 rounded-2xl text-xs border border-stone-100 bg-stone-50/50">
+                            <span class="text-stone-800 font-bold block mb-0.5">📍 Fasilitas Umum</span>
+                            <p class="text-stone-500 leading-relaxed">Kerusakan sarana seperti Toilet, Area Parkir, Bangku Jalan, Pagar, dan Lampu Penerangan.</p>
                         </div>
-                        <div class="bg-orange-50/50 p-4 rounded-2xl border border-orange-100 text-xs">
-                            <span class="text-orange-700 font-bold block">🧹 Kebersihan</span>
-                            <p class="text-stone-500">Sampah menumpuk, bau tidak sedap, limbah.</p>
+                        <div class="category-info-box p-4 rounded-2xl text-xs border border-stone-100 bg-stone-50/50">
+                            <span class="text-stone-800 font-bold block mb-0.5">🧹 Kebersihan Lingkungan</span>
+                            <p class="text-stone-500 leading-relaxed">Tumpukan sampah yang belum diangkut, bau kurang sedap, serta pencemaran limbah sekitar.</p>
                         </div>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="font-bold text-orange-900 mb-6 flex items-center gap-2">
-                        <span class="text-orange-600 text-2xl">|</span> Daftar Laporan Anda
+                <div class="space-y-4">
+                    <h3 class="section-title text-stone-900 flex items-center gap-2 font-black text-sm">
+                        <span class="decorator-bar"></span> Log Riwayat Pengaduan Anda
                     </h3>
-                    <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-stone-200">
+                    <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-stone-200/60">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left table-auto">
-                                <thead class="bg-orange-50 text-orange-900">
+                                <thead class="table-head">
                                     <tr>
-                                        <th class="p-4 text-xs font-black uppercase">Foto</th>
-                                        <th class="p-4 text-xs font-black uppercase">Detail Informasi</th>
-                                        <th class="p-4 text-xs font-black uppercase">Isi Keluhan</th>
-                                        <th class="p-4 text-center text-xs font-black uppercase">Status</th>
+                                        <th class="p-4 w-20 text-center">Foto</th>
+                                        <th class="p-4">Destinasi & Detail</th>
+                                        <th class="p-4">Rincian Keluhan</th>
+                                        <th class="p-4 text-center">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody class="text-xs divide-y divide-orange-50">
-                                    <?php while($r = mysqli_fetch_assoc($reports_query)): ?>
-                                    <tr class="hover:bg-orange-50/30 transition">
-                                        <td class="p-4 align-top">
-                                            <?php if(!empty($r['foto'])): ?>
-                                                <?php if(strpos($r['foto'], 'data:image') === 0 || strpos($r['foto'], 'http') === 0): ?>
-                                                    <img src="<?= $r['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-orange-200 shadow-sm cursor-pointer" onclick="window.open(this.src)">
+                                <tbody class="text-xs divide-y divide-stone-100">
+                                    <?php if(mysqli_num_rows($reports_query) == 0): ?>
+                                        <tr>
+                                            <td colspan="4" class="p-8 text-center text-stone-400 italic">Belum ada riwayat berkas keluhan yang Anda ajukan.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php while($r = mysqli_fetch_assoc($reports_query)): ?>
+                                        <tr class="hover:bg-[#fffaf5]/40 transition-colors">
+                                            <td class="p-4 align-top text-center">
+                                                <?php if(!empty($r['foto'])): ?>
+                                                    <?php if(strpos($r['foto'], 'data:image') === 0 || strpos($r['foto'], 'http') === 0): ?>
+                                                        <img src="<?= $r['foto']; ?>" class="w-12 h-12 object-cover rounded-xl border border-stone-200 shadow-sm cursor-pointer mx-auto transition hover:scale-105" onclick="window.open(this.src)">
+                                                    <?php else: ?>
+                                                        <a href="uploads/<?= $r['foto']; ?>" target="_blank">
+                                                            <img src="uploads/<?= $r['foto']; ?>" class="w-12 h-12 object-cover rounded-xl border border-stone-200 shadow-sm mx-auto transition hover:scale-105">
+                                                        </a>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
-                                                    <a href="uploads/<?= $r['foto']; ?>" target="_blank">
-                                                        <img src="uploads/<?= $r['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-orange-200 shadow-sm">
-                                                    </a>
+                                                    <div class="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center text-[9px] text-stone-400 font-bold mx-auto border border-stone-200">KOSONG</div>
                                                 <?php endif; ?>
-                                            <?php else: ?>
-                                                <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">N/A</div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="p-4 align-top space-y-1">
-                                            <div class="text-stone-400 text-[10px]"><?= $r['tanggal_laporan']; ?></div>
-                                            <div class="font-black text-stone-900"><?= htmlspecialchars($r['lokasi_wisata'] ?? ''); ?></div>
-                                            <?php if(!empty($r['kategori'])): ?>
-                                                <span class="inline-block bg-stone-100 text-stone-700 font-bold px-2 py-0.5 rounded text-[9px]"><?= htmlspecialchars($r['kategori']); ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="p-4 align-top space-y-3">
-                                            <p class="text-stone-600 italic">"<?= htmlspecialchars($r['isi_laporan'] ?? ''); ?>"</p>
-                                            
-                                            <?php if(!empty($r['tanggapan_admin'])): ?>
-                                                <div class="bg-stone-50 border border-stone-200 p-3 rounded-xl space-y-1">
-                                                    <span class="text-[9px] font-black text-orange-700 uppercase tracking-wider block">💬 Tanggapan Admin:</span>
-                                                    <p class="text-stone-700 font-medium text-xs"><?= htmlspecialchars($r['tanggapan_admin']); ?></p>
-                                                </div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="p-4 align-top text-center whitespace-nowrap">
-                                            <?php 
-                                            $badgeClass = 'bg-stone-100 text-stone-600 border border-stone-300'; 
-                                            if (($r['status'] ?? '') === 'Diterima') { 
-                                                $badgeClass = 'bg-green-100 text-green-700 border border-green-300'; 
-                                            } elseif (($r['status'] ?? '') === 'Ditolak' || ($r['status'] ?? '') === 'Tidak Diterima') { 
-                                                $badgeClass = 'bg-red-100 text-red-700 border border-red-300'; 
-                                            }
-                                            ?>
-                                            <span class="px-3 py-1 <?= $badgeClass; ?> rounded-full text-[9px] font-black uppercase tracking-wider">
-                                                <?= htmlspecialchars(($r['status'] === 'Menunggu' || $r['status'] === 'Proses') ? 'Proses' : ($r['status'] ?? 'Proses')); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <?php endwhile; ?>
+                                            </td>
+                                            <td class="p-4 align-top space-y-1">
+                                                <span class="text-stone-400 text-[10px] font-medium block"><?= $r['tanggal_laporan']; ?></span>
+                                                <span class="font-black text-stone-900 text-sm block"><?= htmlspecialchars($r['lokasi_wisata'] ?? ''); ?></span>
+                                                <?php if(!empty($r['kategori'])): ?>
+                                                    <span class="inline-block bg-orange-50 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide border border-orange-100"><?= htmlspecialchars($r['kategori']); ?></span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-4 align-top space-y-3">
+                                                <p class="text-stone-600 bg-stone-50/70 p-2.5 rounded-xl border border-stone-100 leading-relaxed italic">"<?= htmlspecialchars($r['isi_laporan'] ?? ''); ?>"</p>
+                                                
+                                                <?php if(!empty($r['tanggapan_admin'])): ?>
+                                                    <div class="bg-amber-50/60 border border-amber-200/60 p-3 rounded-xl space-y-1">
+                                                        <span class="text-[9px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">💬 Tindakan Pembenahan Admin:</span>
+                                                        <p class="text-stone-700 font-medium text-xs leading-relaxed"><?= htmlspecialchars($r['tanggapan_admin']); ?></p>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="p-4 align-top text-center whitespace-nowrap">
+                                                <?php 
+                                                $statusVal = $r['status'] ?? 'Menunggu';
+                                                $badgeClass = 'bg-stone-50 text-stone-600 border border-stone-200'; 
+                                                if ($statusVal === 'Diterima') { 
+                                                    $badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200'; 
+                                                } elseif ($statusVal === 'Ditolak' || $statusVal === 'Tidak Diterima') { 
+                                                    $badgeClass = 'bg-red-50 text-red-700 border border-red-200'; 
+                                                }
+                                                ?>
+                                                <span class="px-2.5 py-1 <?= $badgeClass; ?> rounded-full text-[9px] font-black uppercase tracking-wider">
+                                                    <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses') ? 'Proses' : $statusVal); ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <?php endwhile; ?>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -162,79 +173,84 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                 </div>
             </div>
 
-            <div class="glass-card bg-white p-6 rounded-3xl shadow-xl border-t-8 border-orange-600 h-fit sticky top-24">
-                <h3 class="font-bold text-orange-900 mb-6 text-center text-xl">Buat Pengaduan</h3>
-                
-                <form action="proses_simpan.php" method="POST" class="space-y-4">
-                    <input type="hidden" name="foto_base64" id="foto_base64">
-
-                    <div>
-                        <label class="text-[9px] font-bold text-gray-400 uppercase">Pelapor</label>
-                        <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold outline-none" readonly>
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-bold text-stone-600 uppercase">Kategori Masalah</label>
-                        <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" required>
-                            <option value="">-- Pilih Kategori --</option>
-                            <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
-                            <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
-                            <option value="Keamanan">Keamanan & Parkir Liar</option>
-                            <option value="Pelayanan">Pelayanan Petugas Wisata</option>
-                        </select>
+            <div class="space-y-6 lg:sticky lg:top-24">
+                <div class="form-container-card bg-white p-6 rounded-[2rem] shadow-sm border border-stone-200/60">
+                    <div class="text-center pb-4 mb-6 border-b border-stone-100">
+                        <h3 class="font-black text-stone-900 text-lg">Buat Pengaduan</h3>
+                        <p class="text-xs text-stone-400 mt-0.5">Ajukan keluhan kenyamanan pariwisata Anda di sini.</p>
                     </div>
                     
-                    <div>
-                        <label class="text-[9px] font-bold text-stone-600 uppercase">Nama Destinasi Wisata</label>
-                        <select name="lokasi_wisata" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" required>
-                            <option value="">-- Pilih Lokasi --</option>
-                             <?php 
-                            if (!empty($wisata_data)) {
-                                foreach ($wisata_data as $row) {
-                                    $nama_lokasi = $row[1] ?? null;
-                                    if ($nama_lokasi && !is_numeric($nama_lokasi) && $nama_lokasi != "-") {
-                                        echo "<option value='".htmlspecialchars($nama_lokasi)."'>".htmlspecialchars($nama_lokasi)."</option>";
+                    <form action="proses_simpan.php" method="POST" class="space-y-4">
+                        <input type="hidden" name="foto_base64" id="foto_base64">
+
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400">Pelapor Terautentikasi</label>
+                            <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold text-xs outline-none" readonly>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Kategori Masalah</label>
+                            <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-stone-500/10 outline-none transition-all" required>
+                                <option value="" disabled selected>-- Pilih Kategori Masalah --</option>
+                                <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
+                                <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
+                                <option value="Keamanan">Keamanan & Parkir Liar</option>
+                                <option value="Pelayanan">Pelayanan Petugas Wisata</option>
+                            </select>
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Nama Destinasi Wisata</label>
+                            <select name="lokasi_wisata" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-stone-500/10 outline-none transition-all" required>
+                                <option value="" disabled selected>-- Pilih Lokasi Destinasi --</option>
+                                 <?php 
+                                if (!empty($wisata_data)) {
+                                    foreach ($wisata_data as $row) {
+                                        $nama_lokasi = $row[1] ?? null;
+                                        if ($nama_lokasi && !is_numeric($nama_lokasi) && $nama_lokasi != "-") {
+                                            echo "<option value='".htmlspecialchars($nama_lokasi)."'>".htmlspecialchars($nama_lokasi)."</option>";
+                                        }
                                     }
+                                } else {
+                                    echo "<option value='Pahlawan Street Center'>Pahlawan Street Center</option>";
+                                    echo "<option value='Madiun Umbul Square'>Madiun Umbul Square</option>";
+                                    echo "<option value='Taman Sumber Umis'>Taman Sumber Umis</option>";
                                 }
-                            } else {
-                                echo "<option value='Pahlawan Street Center'>Pahlawan Street Center</option>";
-                                echo "<option value='Madiun Umbul Square'>Madiun Umbul Square</option>";
-                                echo "<option value='Taman Sumber Umis'>Taman Sumber Umis</option>";
-                            }
-                            ?>
-                        </select>
-                    </div>
+                                ?>
+                            </select>
+                        </div>
 
-                    <div>
-                        <label class="text-[9px] font-bold text-stone-600 uppercase">Koordinat Geografis (Otomatis via Foto)</label>
-                        <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menunggu Anda mengambil foto..." class="w-full px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 text-stone-700 font-medium text-xs outline-none" readonly required>
-                        <p id="geo_status" class="text-[10px] text-stone-400 mt-1 italic">Pin peta otomatis berpindah setelah foto dipilih.</p>
-                    </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Koordinat Geografis <span class="text-orange-600 font-bold">(Otomatis EXIF)</span></label>
+                            <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menunggu Anda mengambil foto..." class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 font-bold text-xs outline-none" readonly required>
+                            <p id="geo_status" class="text-[10px] text-stone-400 mt-1 italic leading-tight">Pin peta otomatis berpindah setelah foto dipilih.</p>
+                        </div>
 
-                    <div class="space-y-1">
-                        <label class="text-[9px] font-bold text-stone-600 uppercase block">Titik Lokasi Peta</label>
-                        <div id="userMap" class="w-full h-44 rounded-2xl border border-stone-200 shadow-sm z-10"></div>
-                    </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Visualisasi Titik Lokasi Peta</label>
+                            <div id="userMap" class="w-full h-36 rounded-2xl border border-stone-200 shadow-inner z-10"></div>
+                        </div>
 
-                    <div>
-                        <label class="text-[9px] font-bold text-gray-400 uppercase">Isi Keluhan</label>
-                        <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="Jelaskan detail masalah..." required></textarea>
-                    </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Isi Ringkasan Keluhan</label>
+                            <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-medium focus:ring-4 focus:ring-stone-500/10 outline-none transition-all resize-none" placeholder="Jelaskan secara detail kendala yang dialami..." required></textarea>
+                        </div>
 
-                    <div class="bg-orange-50 p-4 rounded-xl border border-dashed border-orange-200">
-                        <label class="text-[9px] font-bold text-orange-700 uppercase block mb-2">Ambil Foto Bukti (Kamera HP)</label>
-                        <input type="file" 
-                               id="cameraField" 
-                               accept="image/jpeg, image/jpg, image/png" 
-                               capture="environment" 
-                               required
-                               class="block w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer">
-                    </div>
+                        <div class="camera-upload-zone p-4 rounded-xl border-2 border-dashed border-stone-200 bg-stone-50/50 text-center transition hover:bg-stone-50">
+                            <label class="block text-[10px] font-bold text-stone-500 uppercase cursor-pointer mb-2">Ambil Foto Bukti Lapangan</label>
+                            <input type="file" 
+                                   id="cameraField" 
+                                   accept="image/jpeg, image/jpg, image/png" 
+                                   capture="environment" 
+                                   required
+                                   class="block w-full text-xs text-stone-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-[#4a2c1d] file:text-white hover:file:bg-[#321e14] file:transition file:shadow-sm cursor-pointer">
+                        </div>
 
-                    <button type="submit" id="submitBtn" class="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-200 hover:bg-orange-700 transition transform hover:scale-[1.02]">
-                        Kirim Laporan 🚀
-                    </button>
-                </form>
+                        <button type="submit" id="submitBtn" class="submit-btn w-full text-white font-black py-4 rounded-2xl transition transform active:scale-95 shadow-md">
+                            Kirim Berkas Laporan 🚀
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -243,8 +259,9 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
         const defaultLat = -7.6298;
         const defaultLng = 111.5240;
 
-        const map = L.map('userMap').setView([defaultLat, defaultLng], 13);
+        const map = L.map('userMap', { zoomControl: false }).setView([defaultLat, defaultLng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
         let marker = L.marker([defaultLat, defaultLng]).addTo(map);
 
         function updateFormFields(lat, lng) {
@@ -270,7 +287,6 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
             submitBtn.disabled = true;
             submitBtn.innerText = "Mengompresi Gambar...";
 
-            // PIPELINE 1: Client-Side Canvas Compressing into light base64 string
             const reader = new FileReader();
             reader.onload = function(event) {
                 const img = new Image();
@@ -280,7 +296,6 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    // Set safe bounds (Max 600px)
                     const MAX_WIDTH = 600;
                     const MAX_HEIGHT = 600;
                     let width = img.width;
@@ -302,17 +317,15 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Compress to 50% Quality factor JPEG
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
                     document.getElementById('foto_base64').value = compressedBase64;
                     
                     submitBtn.disabled = false;
-                    submitBtn.innerText = "Kirim Laporan 🚀";
+                    submitBtn.innerText = "Kirim Berkas Laporan 🚀";
                 };
             };
             reader.readAsDataURL(file);
 
-            // PIPELINE 2: Parse EXIF Geo-Coordinates
             EXIF.getData(file, function() {
                 const latData = EXIF.getTag(this, "GPSLatitude");
                 const latRef  = EXIF.getTag(this, "GPSLatitudeRef");
@@ -329,7 +342,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                     updateFormFields(latitude, longitude);
 
                     statusText.innerText = "✅ Lokasi & Ukuran Berhasil Dikompresi Otomatis!";
-                    statusText.className = "text-[10px] text-green-600 mt-1 font-bold";
+                    statusText.className = "text-[10px] text-emerald-600 mt-1 font-bold";
                 } else {
                     statusText.innerText = "⚠️ Tidak ada GPS di foto. Melacak GPS live perangkat...";
                     
@@ -348,7 +361,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                             },
                             () => {
                                 statusText.innerText = "❌ Gagal melacak lokasi otomatis. Gambar terkompresi.";
-                                statusText.className = "text-[10px] text-red-500 mt-1";
+                                statusText.className = "text-[10px] text-red-500 mt-1 font-semibold";
                             }
                         );
                     }
