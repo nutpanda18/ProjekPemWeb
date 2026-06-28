@@ -242,14 +242,16 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                 </td>
                                 <td class="p-4 align-top">
                                     <div class="flex flex-col gap-1.5">
-                                        <form action="update_status.php" method="POST">
-                                            <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Diterima">
-                                            <button type="submit" class="w-full bg-[#d1fae5] text-[#065f46] py-1 rounded-lg font-black text-[9px] uppercase">Terima</button>
-                                        </form>
-                                        <form action="update_status.php" method="POST">
-                                            <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima">
-                                            <button type="submit" class="w-full bg-[#fef3c7] text-[#d97706] py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
-                                        </form>
+                                    <form action="update_status.php" method="POST">
+                                        <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Diterima">
+                                        <button type="submit" class="w-full bg-[#d1fae5] text-[#065f46] py-1 rounded-lg font-black text-[9px] uppercase">Terima</button>
+                                    </form>
+                                    <form action="update_status.php" method="POST">
+                                        <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima">
+                                        <button type="submit" class="w-full bg-[#fef3c7] text-[#d97706] py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
+                                    </form>
+                                    <!-- Hapus Button Preserved Here -->
+                                     <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-[#fee2e2] text-[#991b1b] text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
                                     </div>
                                 </td>
                             </tr>
