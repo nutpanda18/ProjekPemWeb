@@ -44,16 +44,20 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <link rel="stylesheet" href="style_user.css"> 
 </head>
-<body class="app-body min-h-screen flex flex-col">
+<body class="app-body min-h-screen flex flex-col bg-[#fffaf5]">
 
-    <nav class="app-navbar text-white sticky top-0 z-50">
+    <nav class="bg-[#4a2c1d] text-white sticky top-0 z-50 shadow-lg">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="font-black text-lg tracking-tight flex items-center gap-2">🍂 Laporan Wisata <span class="text-amber-300 font-medium text-xs bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Madiun</span></h1>
+            <h1 class="font-black text-lg tracking-tight flex items-center gap-2">
+                🍂 Laporan Wisata <span class="text-amber-300 font-medium text-xs bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Madiun</span>
+            </h1>
             <div class="flex items-center space-x-6 text-xs font-semibold">
-                <a href="/api/Home.php" class="nav-link transition">Home</a>
-                <a href="/api/Tentang.php" class="nav-link transition">Tentang</a>
-                <span class="user-greeting border-l border-white/20 pl-6">Halo, <strong class="text-amber-300 font-bold"><?= htmlspecialchars($currentUser); ?></strong></span>
-                <a href="/api/Login.php?logout=true" class="logout-btn bg-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition shadow-sm">Keluar</a>
+                <a href="/api/Home.php" class="text-white/80 hover:text-amber-300 transition">Home</a>
+                <a href="/api/Tentang.php" class="text-white/80 hover:text-amber-300 transition">Tentang</a>
+                <span class="user-greeting border-l border-white/20 pl-6 text-white/90">
+                    Halo, <strong class="text-amber-300 font-bold"><?= htmlspecialchars($currentUser); ?></strong>
+                </span>
+                <a href="/api/Login.php?logout=true" class="logout-btn bg-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition shadow-sm text-white">Keluar</a>
             </div>
         </div>
     </nav>
@@ -62,7 +66,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
         
         <div class="jumbotron-banner relative rounded-[2rem] overflow-hidden shadow-sm mb-8 h-48">
             <img src="https://static.promediateknologi.id/crop/0x0:0x0/0x0/webp/photo/p2/220/2024/04/04/CaptureJPG-1596998515.jpg" class="w-full h-full object-cover" alt="Madiun Hero Image">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-8">
                 <p class="text-[10px] text-amber-300 uppercase tracking-widest font-black">Portal Layanan Pengaduan Masyarakat</p>
                 <h2 class="text-2xl font-black text-white tracking-tight mt-0.5">Selamat Datang di Pusat Layanan Keluhan Wisata</h2>
             </div>
@@ -82,15 +86,15 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 
                 <div class="glass-card bg-white p-6 rounded-[2rem] shadow-sm border border-stone-200/60">
                     <h3 class="section-title text-stone-900 mb-4 flex items-center gap-2 font-black text-sm">
-                        <span class="decorator-bar"></span> Panduan Label Klasifikasi Keluhan
+                        <span class="inline-block w-1 h-4 bg-amber-500 rounded-full"></span> Panduan Label Klasifikasi Keluhan
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="category-info-box p-4 rounded-2xl text-xs border border-stone-100 bg-stone-50/50">
-                            <span class="text-stone-800 font-bold block mb-0.5">📍 Fasilitas Umum</span>
+                            <span class="text-amber-800 font-bold block mb-0.5">📍 Fasilitas Umum</span>
                             <p class="text-stone-500 leading-relaxed">Kerusakan sarana seperti Toilet, Area Parkir, Bangku Jalan, Pagar, dan Lampu Penerangan.</p>
                         </div>
                         <div class="category-info-box p-4 rounded-2xl text-xs border border-stone-100 bg-stone-50/50">
-                            <span class="text-stone-800 font-bold block mb-0.5">🧹 Kebersihan Lingkungan</span>
+                            <span class="text-amber-800 font-bold block mb-0.5">🧹 Kebersihan Lingkungan</span>
                             <p class="text-stone-500 leading-relaxed">Tumpukan sampah yang belum diangkut, bau kurang sedap, serta pencemaran limbah sekitar.</p>
                         </div>
                     </div>
@@ -98,12 +102,12 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 
                 <div class="space-y-4">
                     <h3 class="section-title text-stone-900 flex items-center gap-2 font-black text-sm">
-                        <span class="decorator-bar"></span> Log Riwayat Pengaduan Anda
+                        <span class="inline-block w-1 h-4 bg-amber-500 rounded-full"></span> Log Riwayat Pengaduan Anda
                     </h3>
                     <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-stone-200/60">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left table-auto">
-                                <thead class="table-head">
+                                <thead class="table-head bg-[#5c3d2e] text-white text-[10px] font-bold uppercase tracking-wider">
                                     <tr>
                                         <th class="p-4 w-20 text-center">Foto</th>
                                         <th class="p-4">Destinasi & Detail</th>
@@ -136,7 +140,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                                 <span class="text-stone-400 text-[10px] font-medium block"><?= $r['tanggal_laporan']; ?></span>
                                                 <span class="font-black text-stone-900 text-sm block"><?= htmlspecialchars($r['lokasi_wisata'] ?? ''); ?></span>
                                                 <?php if(!empty($r['kategori'])): ?>
-                                                    <span class="inline-block bg-orange-50 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide border border-orange-100"><?= htmlspecialchars($r['kategori']); ?></span>
+                                                    <span class="inline-block bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide border border-amber-100"><?= htmlspecialchars($r['kategori']); ?></span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="p-4 align-top space-y-3">
@@ -190,7 +194,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Kategori Masalah</label>
-                            <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-stone-500/10 outline-none transition-all" required>
+                            <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
                                 <option value="" disabled selected>-- Pilih Kategori Masalah --</option>
                                 <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
                                 <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
@@ -201,7 +205,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                         
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Nama Destinasi Wisata</label>
-                            <select name="lokasi_wisata" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-stone-500/10 outline-none transition-all" required>
+                            <select name="lokasi_wisata" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
                                 <option value="" disabled selected>-- Pilih Lokasi Destinasi --</option>
                                  <?php 
                                 if (!empty($wisata_data)) {
@@ -221,7 +225,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                         </div>
 
                         <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Koordinat Geografis <span class="text-orange-600 font-bold">(Otomatis EXIF)</span></label>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Koordinat Geografis <span class="text-amber-600 font-bold">(Otomatis EXIF)</span></label>
                             <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menunggu Anda mengambil foto..." class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 font-bold text-xs outline-none" readonly required>
                             <p id="geo_status" class="text-[10px] text-stone-400 mt-1 italic leading-tight">Pin peta otomatis berpindah setelah foto dipilih.</p>
                         </div>
@@ -233,7 +237,7 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
 
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Isi Ringkasan Keluhan</label>
-                            <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-medium focus:ring-4 focus:ring-stone-500/10 outline-none transition-all resize-none" placeholder="Jelaskan secara detail kendala yang dialami..." required></textarea>
+                            <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-medium focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none" placeholder="Jelaskan secara detail kendala yang dialami..." required></textarea>
                         </div>
 
                         <div class="camera-upload-zone p-4 rounded-xl border-2 border-dashed border-stone-200 bg-stone-50/50 text-center transition hover:bg-stone-50">
@@ -246,8 +250,8 @@ $reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapo
                                    class="block w-full text-xs text-stone-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-[#4a2c1d] file:text-white hover:file:bg-[#321e14] file:transition file:shadow-sm cursor-pointer">
                         </div>
 
-                        <button type="submit" id="submitBtn" class="submit-btn w-full text-white font-black py-4 rounded-2xl transition transform active:scale-95 shadow-md">
-                            Kirim Berkas Laporan 🚀
+                        <button type="submit" id="submitBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-4 rounded-2xl transition transform active:scale-95 shadow-md shadow-amber-600/20">
+                            Kirim Berkas Laporan 
                         </button>
                     </form>
                 </div>
