@@ -11,9 +11,9 @@ ini_set('display_errors', 1);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1. Sanitize standard inputs
     $nama_pelapor   = mysqli_real_escape_string($koneksi, $_POST['nama_pelapor'] ?? '');
-    $kategori       = mysqli_real_escape_string($koneksi, $_POST['kategori'] ?? '');
+    $id_kategori    = intval($_POST['id_kategori'] ?? 0); // Step 5: capture FK integer
     $lokasi_wisata  = mysqli_real_escape_string($koneksi, $_POST['lokasi_wisata'] ?? '');
-    $isi_laporan    = $_POST['isi_laporan'] ?? ''; // Escaped below or let HTML handling cover it
+    $isi_laporan    = $_POST['isi_laporan'] ?? '';
     $isi_laporan_esc = mysqli_real_escape_string($koneksi, $isi_laporan);
     $gps_koordinat  = mysqli_real_escape_string($koneksi, $_POST['gps_koordinat'] ?? '');
     
@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $imageBase64 = mysqli_real_escape_string($koneksi, $rawBase64);
         
         // 3. Insert directly into TiDB cloud rows safely!
-        $query = "INSERT INTO laporan (nama_pelapor, kategori, lokasi_wisata, isi_laporan, foto, gps_koordinat, status, tanggal_laporan) 
-                  VALUES ('$nama_pelapor', '$kategori', '$lokasi_wisata', '$isi_laporan_esc', '$imageBase64', '$gps_koordinat', '$status', '$tanggal')";
+        $query = "INSERT INTO laporan (nama_pelapor, id_kategori, lokasi_wisata, isi_laporan, foto, gps_koordinat, status, tanggal_laporan) 
+                  VALUES ('$nama_pelapor', '$id_kategori', '$lokasi_wisata', '$isi_laporan_esc', '$imageBase64', '$gps_koordinat', '$status', '$tanggal')";
         
         $insert = mysqli_query($koneksi, $query);
 

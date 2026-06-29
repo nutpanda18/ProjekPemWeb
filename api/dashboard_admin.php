@@ -29,9 +29,9 @@ $pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] 
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
-// Fetch total counts grouped by category
+// Fetch total counts grouped by category (using joined name)
 $category_counts = [];
-$cat_q = mysqli_query($koneksi, "SELECT kategori, COUNT(*) as jumlah FROM laporan WHERE kategori IS NOT NULL AND kategori != '' GROUP BY kategori ORDER BY jumlah DESC");
+$cat_q = mysqli_query($koneksi, "SELECT kategori.nama_kategori as kategori, COUNT(*) as jumlah FROM laporan LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori WHERE kategori.nama_kategori IS NOT NULL GROUP BY kategori.nama_kategori ORDER BY jumlah DESC");
 if ($cat_q) {
     while ($row_cat = mysqli_fetch_assoc($cat_q)) {
         $category_counts[$row_cat['kategori']] = $row_cat['jumlah'];
@@ -39,8 +39,13 @@ if ($cat_q) {
 }
 $top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
 
-// Fetch reports list
-$all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_wisata, kategori, gps_koordinat, isi_laporan, status, tanggal_laporan, tanggapan_admin, foto FROM laporan ORDER BY tanggal_laporan DESC");
+// Step 3: Updated Normalized Query — LEFT JOIN to fetch human-readable category name
+$all_reports = mysqli_query($koneksi, "
+    SELECT laporan.*, kategori.nama_kategori
+    FROM laporan
+    LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori
+    ORDER BY laporan.tanggal_laporan DESC
+");
 ?>
 
 <!DOCTYPE html>
@@ -203,7 +208,8 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                         </thead>
                         <tbody class="divide-y divide-orange-50 text-xs" id="reports-table-body">
                             <?php while($row = mysqli_fetch_assoc($all_reports)): 
-                                $rowCatClean = strtoupper(trim($row['kategori'] ?? 'UMUM'));
+                                $displayKategori = $row['nama_kategori'] ?? $row['kategori'] ?? 'UMUM';
+                                $rowCatClean = strtoupper(trim($displayKategori));
                             ?>
                             <tr class="hover:bg-orange-50/30 transition-colors report-data-row" data-category="<?= htmlspecialchars($rowCatClean); ?>">
                                 <td class="p-4 align-top">
@@ -222,7 +228,7 @@ $all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_w
                                         <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor'] ?? ''); ?></span>
                                     </div>
                                     <div class="flex flex-wrap gap-2 items-center">
-                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide"><?= htmlspecialchars($row['kategori'] ?? 'UMUM'); ?></span>
+                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide"><?= htmlspecialchars($displayKategori); ?></span>
                                         <?php if(!empty($row['gps_koordinat'])): ?>
                                             <a href="https://www.openstreetmap.org/search?query=<?= urlencode($row['gps_koordinat']); ?>" target="_blank" class="bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded text-[9px]">🗺️ Peta</a>
                                         <?php endif; ?>
