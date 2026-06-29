@@ -6,7 +6,7 @@
 include 'koneksi.php';
 
 // 1. Security Check
-if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true' || $_COOKIE['role'] !== 'admin') { 
+if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true') { 
     header("Location: /api/Login.php"); 
     exit(); 
 }
