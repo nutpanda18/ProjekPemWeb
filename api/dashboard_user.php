@@ -1,47 +1,53 @@
 <?php
 /**
- * dashboard_user.php
- * Automated EXIF GPS Data Extraction with Base64 Cloud Bypass & Safe Client Compression
+ * dashboard_admin.php
+ * Updated: SPA Layout with Dynamic Tab Filtering & Advanced Chart.js Statistics Layout
  */
-include 'koneksi.php'; 
-include 'api.php'; 
+include 'koneksi.php';
 
-// Safeguard check for missing functions
-if (!function_exists('getWisataData')) {
-    function getWisataData() {
-        return [
-            [1, "Pahlawan Street Center"],
-            [2, "Madiun Umbul Square"],
-            [3, "Taman Sumber Umis"],
-            [4, "Hutan Kota Madiun"]
-        ];
-    }
-}
-
-if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true') { 
+// 1. Security Check
+if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true' || $_COOKIE['role'] !== 'admin') { 
     header("Location: /api/Login.php"); 
     exit(); 
 }
 
-$currentUser = $_COOKIE['username'];
-$wisata_data = getWisataData(); 
+$current_user = $_COOKIE['username'] ?? 'Admin';
 
-$user_total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE nama_pelapor='$currentUser'");
-$total_data = mysqli_fetch_assoc($user_total_q)['total'] ?? 0;
+// 2. Fetch Metrics
+$total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan");
+if (!$total_q) {
+    die("<div style='color:red; font-family:sans-serif; padding:20px; background:#ffebee; border-radius:10px; margin:20px;'>".
+        "<h3>❌ Connection Error</h3><strong>Error:</strong> " . mysqli_error($koneksi) . "</div>");
+}
+$total_reports = mysqli_fetch_assoc($total_q)['total'] ?? 0;
 
-$reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapor='$currentUser' ORDER BY tanggal_laporan DESC");
+$accepted_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Diterima'");
+$accepted_reports = (!$accepted_q) ? 0 : (mysqli_fetch_assoc($accepted_q)['total'] ?? 0);
 
-// Fetch all tanggapan for this user's reports
-$user_tanggapan = [];
-$utq = mysqli_query($koneksi, "
-    SELECT tanggapan.* FROM tanggapan
-    INNER JOIN laporan ON tanggapan.id_laporan = laporan.id_laporan
-    WHERE laporan.nama_pelapor = '$currentUser'
-    ORDER BY tanggapan.tgl_tanggapan ASC
-");
-if ($utq) {
-    while ($ut = mysqli_fetch_assoc($utq)) {
-        $user_tanggapan[$ut['id_laporan']][] = $ut;
+$pending_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE status='Proses' OR status='Menunggu' OR status='Diproses'");
+$pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] ?? 0);
+
+$efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
+
+// Fetch total counts grouped by category via JOIN
+$category_counts = [];
+$cat_q = mysqli_query($koneksi, "SELECT kategori.nama_kategori as kategori, COUNT(*) as jumlah FROM laporan LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori WHERE kategori.nama_kategori IS NOT NULL GROUP BY kategori.nama_kategori ORDER BY jumlah DESC");
+if ($cat_q) {
+    while ($row_cat = mysqli_fetch_assoc($cat_q)) {
+        $category_counts[$row_cat['kategori']] = $row_cat['jumlah'];
+    }
+}
+$top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
+
+// Fetch reports list with kategori name via JOIN
+$all_reports = mysqli_query($koneksi, "SELECT laporan.id_laporan, laporan.nama_pelapor, laporan.lokasi_wisata, laporan.gps_koordinat, laporan.isi_laporan, laporan.status, laporan.tanggal_laporan, laporan.foto, kategori.nama_kategori as kategori FROM laporan LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori ORDER BY laporan.tanggal_laporan DESC");
+
+// Pre-fetch all tanggapan grouped by id_laporan for efficient lookup
+$all_tanggapan = [];
+$tq = mysqli_query($koneksi, "SELECT * FROM tanggapan ORDER BY tgl_tanggapan ASC");
+if ($tq) {
+    while ($t = mysqli_fetch_assoc($tq)) {
+        $all_tanggapan[$t['id_laporan']][] = $t;
     }
 }
 ?>
@@ -51,348 +57,334 @@ if ($utq) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Pelapor - Madiun</title>
+    <title>Admin Panel - Laporan Wisata Madiun</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-    <link rel="stylesheet" href="style_user.css"> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .dashboard-view { transition: opacity 0.2s ease-in-out; }
+    </style>
 </head>
-<body class="app-body min-h-screen flex flex-col bg-[#fffaf5]">
+<body class="bg-[#fffaf5] text-stone-800 min-h-screen flex flex-row overflow-x-hidden">
 
-    <nav class="bg-[#4a2c1d] text-white sticky top-0 z-50 shadow-lg">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="font-black text-lg tracking-tight flex items-center gap-2">
-                🍂 Laporan Wisata <span class="text-amber-300 font-medium text-xs bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Madiun</span>
-            </h1>
-            <div class="flex items-center space-x-6 text-xs font-semibold">
-                <a href="/api/Home.php" class="text-white/80 hover:text-amber-300 transition">Home</a>
-                <a href="/api/Tentang.php" class="text-white/80 hover:text-amber-300 transition">Tentang</a>
-                <span class="user-greeting border-l border-white/20 pl-6 text-white/90">
-                    Halo, <strong class="text-amber-300 font-bold"><?= htmlspecialchars($currentUser); ?></strong>
-                </span>
-                <a href="/api/Login.php?logout=true" class="logout-btn bg-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition shadow-sm text-white">Keluar</a>
+    <aside class="w-72 bg-[#4a2c1d] text-white flex flex-col justify-between p-6 shrink-0 shadow-xl min-h-screen sticky top-0">
+        <div class="space-y-8">
+            <div class="border-b border-white/10 pb-4">
+                <h1 class="font-black text-xl flex items-center gap-2 tracking-wide text-amber-100">🍂 AdminPanel</h1>
+                <p class="text-[10px] text-amber-200/60 font-semibold uppercase tracking-wider mt-1">Laporan Wisata Madiun</p>
             </div>
-        </div>
-    </nav>
 
-    <div class="container mx-auto px-4 py-8 max-w-7xl flex-1">
-        
-        <div class="jumbotron-banner relative rounded-[2rem] overflow-hidden shadow-sm mb-8 h-48">
-            <img src="https://static.promediateknologi.id/crop/0x0:0x0/0x0/webp/photo/p2/220/2024/04/04/CaptureJPG-1596998515.jpg" class="w-full h-full object-cover" alt="Madiun Hero Image">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-8">
-                <p class="text-[10px] text-amber-300 uppercase tracking-widest font-black">Portal Layanan Pengaduan Masyarakat</p>
-                <h2 class="text-2xl font-black text-white tracking-tight mt-0.5">Selamat Datang di Pusat Layanan Keluhan Wisata</h2>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
-            <div class="lg:col-span-2 space-y-8">
+            <nav class="space-y-2" id="sidebar-nav">
+                <p class="text-[10px] uppercase tracking-wider text-amber-200/40 font-bold px-3 mb-2">Main Menu</p>
                 
-                <div class="stat-premium-card bg-white p-6 rounded-[2rem] flex items-center justify-between border border-stone-200/60 shadow-sm relative overflow-hidden">
+                <button onclick="switchView('ringkasan', this)" id="btn-ringkasan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-amber-300 bg-white/10 border-l-4 border-amber-400 text-left transition-all shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M520-600v-240h320v240H520ZM120-440v-400h320v400H120Zm400 320v-400h320v400H520Zm-400 0v-240h320v240H120Zm80-400h160v-240H200v240Zm400 320h160v-240H600v240Zm0-480h160v-80H600v80ZM200-200h160v-80H200v80Zm160-320Zm240-160Zm0 240ZM360-280Z"/></svg> Ringkasan Data Laporan
+                </button>
+                
+                <button onclick="switchView('kelola', this)" id="btn-kelola" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 border-l-4 border-transparent text-left transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M280-280h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Zm-80 480q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/></svg> Kelola Laporan
+                </button>
+            </nav>
+        </div>
+
+        <div class="border-t border-white/10 pt-4 space-y-3">
+            <div class="flex items-center justify-between px-2 text-xs">
+                <span class="text-stone-300">Account:</span>
+                <strong class="text-amber-300 font-bold"><?= htmlspecialchars($current_user); ?></strong>
+            </div>
+            <a href="/api/Login.php?logout=true" class="w-full bg-red-600 px-4 py-3 rounded-xl font-bold text-xs text-center block hover:bg-red-700 transition shadow-md">Keluar Akun</a>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-8 lg:p-12 max-w-7xl overflow-y-auto">
+        
+        <header class="flex items-center justify-between border-b border-stone-200 pb-6 mb-10">
+            <div>
+                <h2 id="view-title" class="text-2xl font-black text-stone-900">Ringkasan Data Laporan</h2>
+                <p id="view-subtitle" class="text-xs text-stone-400 mt-0.5">Berikut adalah ringkasan data laporan.</p>
+            </div>
+            <div class="bg-white px-4 py-2 rounded-2xl border border-stone-200/60 shadow-sm text-xs font-semibold text-stone-600">
+                📅 Hari Ini: <span class="text-stone-900"><?= date('d M Y'); ?></span>
+            </div>
+        </header>
+
+        <div id="view-ringkasan-content" class="dashboard-view space-y-8">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-[1.5rem] shadow-sm flex justify-between items-center border border-stone-100">
                     <div>
-                        <p class="text-[10px] font-black uppercase text-stone-400 tracking-wider">Total Laporan Kontribusi Anda</p>
-                        <h4 class="text-4xl font-black text-stone-900 mt-1"><?= $total_data; ?> <span class="text-xs font-bold text-stone-400">Berkas Pengaduan</span></h4>
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Laporan</p>
+                        <h2 class="text-4xl font-black text-stone-900 mt-1"><?= $total_reports; ?></h2>
                     </div>
-                    <div class="stat-icon-wrapper bg-[#fffaf5] p-4 rounded-2xl text-2xl border border-orange-100">📂</div>
+                    <div class="bg-stone-50 p-3 rounded-2xl text-2xl">📁</div>
                 </div>
-
-                <div class="glass-card bg-white p-6 rounded-[2rem] shadow-sm border border-stone-200/60">
-                    <h3 class="section-title text-stone-900 mb-4 flex items-center gap-2 font-black text-sm">
-                        <span class="inline-block w-1 h-4 bg-amber-500 rounded-full"></span> Panduan Label Klasifikasi Keluhan
-                    </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="category-info-box p-4 rounded-2xl text-xs border border-stone-100 bg-stone-50/50">
-                            <span class="text-amber-800 font-bold block mb-0.5">📍 Fasilitas Umum</span>
-                            <p class="text-stone-500 leading-relaxed">Kerusakan sarana seperti Toilet, Area Parkir, Bangku Jalan, Pagar, dan Lampu Penerangan.</p>
-                        </div>
-                        <div class="category-info-box p-4 rounded-2xl text-xs border border-stone-100 bg-stone-50/50">
-                            <span class="text-amber-800 font-bold block mb-0.5">🧹 Kebersihan Lingkungan</span>
-                            <p class="text-stone-500 leading-relaxed">Tumpukan sampah yang belum diangkut, bau kurang sedap, serta pencemaran limbah sekitar.</p>
-                        </div>
+                <div class="bg-white p-6 rounded-[1.5rem] shadow-sm flex justify-between items-center border border-stone-100">
+                    <div>
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Dalam Proses</p>
+                        <h2 class="text-4xl font-black text-amber-500 mt-1"><?= $pending_reports; ?></h2>
                     </div>
+                    <div class="bg-amber-50 p-3 rounded-2xl text-2xl">⏳</div>
                 </div>
-
-                <div class="space-y-4">
-                    <h3 class="section-title text-stone-900 flex items-center gap-2 font-black text-sm">
-                        <span class="inline-block w-1 h-4 bg-amber-500 rounded-full"></span> Log Riwayat Pengaduan Anda
-                    </h3>
-                    <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-stone-200/60">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left table-auto">
-                                <thead class="table-head bg-[#5c3d2e] text-white text-[10px] font-bold uppercase tracking-wider">
-                                    <tr>
-                                        <th class="p-4 w-20 text-center">Foto</th>
-                                        <th class="p-4">Destinasi & Detail</th>
-                                        <th class="p-4">Rincian Keluhan</th>
-                                        <th class="p-4 text-center">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="text-xs divide-y divide-stone-100">
-                                    <?php if(mysqli_num_rows($reports_query) == 0): ?>
-                                        <tr>
-                                            <td colspan="4" class="p-8 text-center text-stone-400 italic">Belum ada riwayat berkas keluhan yang Anda ajukan.</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php while($r = mysqli_fetch_assoc($reports_query)): ?>
-                                        <tr class="hover:bg-[#fffaf5]/40 transition-colors">
-                                            <td class="p-4 align-top text-center">
-                                                <?php if(!empty($r['foto'])): ?>
-                                                    <?php if(strpos($r['foto'], 'data:image') === 0 || strpos($r['foto'], 'http') === 0): ?>
-                                                        <img src="<?= $r['foto']; ?>" class="w-12 h-12 object-cover rounded-xl border border-stone-200 shadow-sm cursor-pointer mx-auto transition hover:scale-105" onclick="window.open(this.src)">
-                                                    <?php else: ?>
-                                                        <a href="uploads/<?= $r['foto']; ?>" target="_blank">
-                                                            <img src="uploads/<?= $r['foto']; ?>" class="w-12 h-12 object-cover rounded-xl border border-stone-200 shadow-sm mx-auto transition hover:scale-105">
-                                                        </a>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <div class="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center text-[9px] text-stone-400 font-bold mx-auto border border-stone-200">KOSONG</div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="p-4 align-top space-y-1">
-                                                <span class="text-stone-400 text-[10px] font-medium block"><?= $r['tanggal_laporan']; ?></span>
-                                                <span class="font-black text-stone-900 text-sm block"><?= htmlspecialchars($r['lokasi_wisata'] ?? ''); ?></span>
-                                                <?php if(!empty($r['kategori'])): ?>
-                                                    <span class="inline-block bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide border border-amber-100"><?= htmlspecialchars($r['kategori']); ?></span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="p-4 align-top space-y-3">
-                                                <p class="text-stone-600 bg-stone-50/70 p-2.5 rounded-xl border border-stone-100 leading-relaxed italic">"<?= htmlspecialchars($r['isi_laporan'] ?? ''); ?>"</p>
-
-                                                <?php 
-                                                $replies = $user_tanggapan[$r['id_laporan']] ?? [];
-                                                if (!empty($replies)): ?>
-                                                    <div class="space-y-2">
-                                                        <span class="text-[9px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">💬 Tanggapan Admin</span>
-                                                        <?php foreach($replies as $reply): ?>
-                                                            <div class="bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
-                                                                <p class="text-stone-700 font-medium text-xs leading-relaxed"><?= htmlspecialchars($reply['isi_tanggapan']); ?></p>
-                                                                <span class="text-[9px] text-stone-400 mt-1 block"><?= $reply['tgl_tanggapan']; ?></span>
-                                                            </div>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="p-4 align-top text-center whitespace-nowrap">
-                                                <?php 
-                                                $statusVal = $r['status'] ?? 'Menunggu';
-                                                $badgeClass = 'bg-stone-50 text-stone-600 border border-stone-200'; 
-                                                if ($statusVal === 'Diterima') { 
-                                                    $badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200'; 
-                                                } elseif ($statusVal === 'Ditolak' || $statusVal === 'Tidak Diterima') { 
-                                                    $badgeClass = 'bg-red-50 text-red-700 border border-red-200'; 
-                                                }
-                                                ?>
-                                                <span class="px-2.5 py-1 <?= $badgeClass; ?> rounded-full text-[9px] font-black uppercase tracking-wider">
-                                                    <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses') ? 'Proses' : $statusVal); ?>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="bg-white p-6 rounded-[1.5rem] shadow-sm flex justify-between items-center border border-stone-100">
+                    <div>
+                        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Laporan Selesai</p>
+                        <h2 class="text-4xl font-black text-emerald-600 mt-1"><?= $accepted_reports; ?></h2>
                     </div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl text-2xl">✅</div>
                 </div>
             </div>
 
-            <div class="space-y-6 lg:sticky lg:top-24">
-                <div class="form-container-card bg-white p-6 rounded-[2rem] shadow-sm border border-stone-200/60">
-                    <div class="text-center pb-4 mb-6 border-b border-stone-100">
-                        <h3 class="font-black text-stone-900 text-lg">Buat Pengaduan</h3>
-                        <p class="text-xs text-stone-400 mt-0.5">Ajukan keluhan kenyamanan pariwisata Anda di sini.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="font-bold text-stone-900 text-base">Proporsi Kategori Keluhan</h3>
+                        <p class="text-xs text-stone-400">Visualisasi persentase pengaduan masuk.</p>
                     </div>
                     
-                    <form action="proses_simpan.php" method="POST" class="space-y-4">
-                        <input type="hidden" name="foto_base64" id="foto_base64">
+                    <div class="flex-1 flex items-center justify-center min-h-[280px] max-h-[320px] relative">
+                        <?php if(empty($category_counts)): ?>
+                            <p class="text-xs text-stone-400 italic">Belum ada data visualisasi.</p>
+                        <?php else: ?>
+                            <canvas id="categoryDonutChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
 
-                        <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400">Pelapor Terautentikasi</label>
-                            <input type="text" name="nama_pelapor" value="<?= htmlspecialchars($currentUser); ?>" class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-500 font-bold text-xs outline-none" readonly>
-                        </div>
-
-                        <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Kategori Masalah</label>
-                            <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
-                                <option value="" disabled selected>-- Pilih Kategori Masalah --</option>
-                                <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
-                                <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
-                                <option value="Keamanan">Keamanan & Parkir Liar</option>
-                                <option value="Pelayanan">Pelayanan Petugas Wisata</option>
-                            </select>
-                        </div>
+                <div class="space-y-6">
+                    
+                    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100">
+                        <h3 class="font-bold text-stone-900 text-sm flex items-center gap-2">☑️ Penyelesaian Kasus</h3>
+                        <p class="text-[11px] text-stone-400 mb-4">Rasio efisiensi penanganan pengaduan valid.</p>
                         
-                        <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Nama Destinasi Wisata</label>
-                            <select name="lokasi_wisata" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
-                                <option value="" disabled selected>-- Pilih Lokasi Destinasi --</option>
-                                 <?php 
-                                if (!empty($wisata_data)) {
-                                    foreach ($wisata_data as $row) {
-                                        $nama_lokasi = $row[1] ?? null;
-                                        if ($nama_lokasi && !is_numeric($nama_lokasi) && $nama_lokasi != "-") {
-                                            echo "<option value='".htmlspecialchars($nama_lokasi)."'>".htmlspecialchars($nama_lokasi)."</option>";
-                                        }
-                                    }
-                                } else {
-                                    echo "<option value='Pahlawan Street Center'>Pahlawan Street Center</option>";
-                                    echo "<option value='Madiun Umbul Square'>Madiun Umbul Square</option>";
-                                    echo "<option value='Taman Sumber Umis'>Taman Sumber Umis</option>";
-                                }
-                                ?>
-                            </select>
+                        <div class="bg-[#fffaf5] border border-orange-100/70 p-4 rounded-2xl">
+                            <div class="flex justify-between items-center text-xs font-bold mb-2">
+                                <span class="text-stone-700">Laporan Terverifikasi</span>
+                                <span class="text-emerald-600 text-sm"><?= round($efficiency); ?>%</span>
+                            </div>
+                            <div class="w-full bg-stone-200/60 h-2.5 rounded-full overflow-hidden">
+                                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: <?= $efficiency; ?>%"></div>
+                            </div>
                         </div>
+                    </div>
 
-                        <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Koordinat Geografis <span class="text-amber-600 font-bold">(Otomatis EXIF)</span></label>
-                            <input type="text" id="gps_koordinat" name="gps_koordinat" placeholder="Menunggu Anda mengambil foto..." class="w-full px-4 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 font-bold text-xs outline-none" readonly required>
-                            <p id="geo_status" class="text-[10px] text-stone-400 mt-1 italic leading-tight">Pin peta otomatis berpindah setelah foto dipilih.</p>
+                    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-stone-400 mb-3">Tren Terbanyak</p>
+                        <div class="bg-amber-50/60 border border-amber-200/70 p-4 rounded-2xl flex items-start gap-3">
+                            <span class="text-xl mt-0.5">🔥</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-stone-500 uppercase">Kategori</h4>
+                                <h3 class="text-sm font-black text-amber-900 uppercase tracking-wide mt-0.5"><?= htmlspecialchars($top_category); ?></h3>
+                                <p class="text-[11px] text-stone-500 mt-1">Mendominasi total laporan masuk saat ini.</p>
+                            </div>
                         </div>
+                    </div>
 
-                        <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Visualisasi Titik Lokasi Peta</label>
-                            <div id="userMap" class="w-full h-36 rounded-2xl border border-stone-200 shadow-inner z-10"></div>
-                        </div>
+                </div>
+            </div>
 
-                        <div class="space-y-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Isi Ringkasan Keluhan</label>
-                            <textarea name="isi_laporan" rows="3" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-medium focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none" placeholder="Jelaskan secara detail kendala yang dialami..." required></textarea>
-                        </div>
+        </div>
 
-                        <div class="camera-upload-zone p-4 rounded-xl border-2 border-dashed border-stone-200 bg-stone-50/50 text-center transition hover:bg-stone-50">
-                            <label class="block text-[10px] font-bold text-stone-500 uppercase cursor-pointer mb-2">Ambil Foto Bukti Lapangan</label>
-                            <input type="file" 
-                                   id="cameraField" 
-                                   accept="image/jpeg, image/jpg, image/png" 
-                                   capture="environment" 
-                                   required
-                                   class="block w-full text-xs text-stone-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-[#4a2c1d] file:text-white hover:file:bg-[#321e14] file:transition file:shadow-sm cursor-pointer">
-                        </div>
+        <div id="view-kelola-content" class="dashboard-view hidden space-y-6">
+            <div class="flex flex-wrap items-center gap-2 border-b border-stone-200 pb-3" id="tab-filter-bar">
+                <button onclick="filterTableCategory('ALL', this)" class="px-4 py-2 bg-[#4a2c1d] text-white text-xs font-bold rounded-xl shadow-sm transition">Semua Laporan</button>
+                <button onclick="filterTableCategory('FASILITAS', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">Fasilitas</button>
+                <button onclick="filterTableCategory('KEBERSIHAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">Kebersihan</button>
+                <button onclick="filterTableCategory('PELAYANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">Pelayanan</button>
+                <button onclick="filterTableCategory('KEAMANAN', this)" class="px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition">Keamanan</button>
+            </div>
 
-                        <button type="submit" id="submitBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-4 rounded-2xl transition transform active:scale-95 shadow-md shadow-amber-600/20">
-                            Kirim Berkas Laporan 
-                        </button>
-                    </form>
+            <div id="empty-table-placeholder" class="hidden bg-white p-12 text-center rounded-[2rem] border border-orange-50 shadow-sm">
+                <span class="text-4xl">🍃</span>
+                <h4 class="font-bold text-stone-700 mt-2 text-sm">Tidak Ada Laporan</h4>
+                <p class="text-xs text-stone-400 mt-0.5">Belum ditemukan berkas pengaduan dalam kategori ini.</p>
+            </div>
+
+            <div id="table-card-wrapper" class="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-orange-50">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left table-auto">
+                        <thead class="bg-[#5c3d2e] text-white font-bold uppercase text-xs">
+                            <tr>
+                                <th class="p-4 w-24">Bukti Foto</th> 
+                                <th class="p-4">Detail Informasi Keluhan</th>
+                                <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-center">Aksi Moderasi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-orange-50 text-xs" id="reports-table-body">
+                            <?php while($row = mysqli_fetch_assoc($all_reports)): 
+                                $rowCatClean = strtoupper(trim($row['kategori'] ?? 'UMUM'));
+                            ?>
+                            <tr class="hover:bg-orange-50/30 transition-colors report-data-row" data-category="<?= htmlspecialchars($rowCatClean); ?>">
+                                <td class="p-4 align-top">
+                                    <?php if(!empty($row['foto'])): ?>
+                                        <div class="relative w-16 h-16 cursor-pointer group" onclick="openPhotoModal(this)" data-photo="<?= htmlspecialchars($row['foto']); ?>">
+                                            <img src="<?= (strpos($row['foto'], 'data:image') === 0 || strpos($row['foto'], 'http') === 0) ? $row['foto'] : '../uploads/'.$row['foto']; ?>" class="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm" loading="lazy" onerror="this.src='https://placehold.co/150x150?text=Foto'">
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="w-16 h-16 bg-stone-100 rounded-xl flex items-center justify-center text-[8px] text-stone-400">No Image</div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="p-4 align-top space-y-2">
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-[10px] text-gray-400 font-medium"><?= $row['tanggal_laporan']; ?></span>
+                                        <span class="font-black text-orange-900 text-sm"><?= htmlspecialchars($row['lokasi_wisata'] ?? ''); ?></span>
+                                        <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor'] ?? ''); ?></span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2 items-center">
+                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide"><?= htmlspecialchars($row['kategori'] ?? 'UMUM'); ?></span>
+                                        <?php if(!empty($row['gps_koordinat'])): ?>
+                                            <a href="https://www.openstreetmap.org/search?query=<?= urlencode($row['gps_koordinat']); ?>" target="_blank" class="bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded text-[9px]">🗺️ Peta</a>
+                                        <?php endif; ?>
+                                    </div>
+                                    <p class="text-stone-600 bg-stone-50/80 p-2 rounded-xl italic">"<?= htmlspecialchars($row['isi_laporan'] ?? ''); ?>"</p>
+
+                                    <?php 
+                                    $replies = $all_tanggapan[$row['id_laporan']] ?? [];
+                                    if (!empty($replies)): ?>
+                                        <div class="space-y-1.5 mt-2">
+                                            <span class="text-[9px] font-black text-amber-800 uppercase tracking-wider">💬 Tanggapan Admin</span>
+                                            <?php foreach($replies as $reply): ?>
+                                                <div class="bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
+                                                    <p class="text-stone-700 text-xs leading-relaxed"><?= htmlspecialchars($reply['isi_tanggapan']); ?></p>
+                                                    <span class="text-[9px] text-stone-400 mt-1 block"><?= $reply['tgl_tanggapan']; ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <form action="/api/simpan_tanggapan.php" method="POST" class="mt-2 space-y-1.5">
+                                        <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>">
+                                        <textarea name="isi_tanggapan" rows="2" placeholder="Tulis tanggapan baru..." class="w-full px-2.5 py-2 text-xs border border-stone-200 rounded-xl bg-stone-50 outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" required></textarea>
+                                        <button type="submit" class="w-full bg-amber-100 text-amber-900 py-1 rounded-lg font-black text-[9px] uppercase hover:bg-amber-200 transition">Kirim Tanggapan</button>
+                                    </form>
+                                </td>
+                                <td class="p-4 align-top text-center whitespace-nowrap">
+                                    <?php 
+                                    $statusVal = $row['status'] ?? 'Menunggu';
+                                    $badgeStyle = "bg-stone-100 text-stone-600 border-stone-200"; 
+                                    if ($statusVal === 'Diterima') { $badgeStyle = "bg-green-50 text-green-700 border-green-200"; }
+                                    elseif ($statusVal === 'Tidak Diterima' || $statusVal === 'Ditolak') { $badgeStyle = "bg-red-50 text-red-700 border-red-200"; }
+                                    ?>
+                                    <span class="px-2 py-1 <?= $badgeStyle; ?> rounded-full text-[9px] font-black border uppercase">
+                                        <?= htmlspecialchars(($statusVal === 'Menunggu' || $statusVal === 'Proses') ? 'Proses' : $statusVal); ?>
+                                    </span>
+                                </td>
+                                <td class="p-4 align-top">
+                                    <div class="flex flex-col gap-1.5">
+                                    <form action="update_status.php" method="POST">
+                                        <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Diterima">
+                                        <button type="submit" class="w-full bg-[#d1fae5] text-[#065f46] py-1 rounded-lg font-black text-[9px] uppercase">Terima</button>
+                                    </form>
+                                    <form action="update_status.php" method="POST">
+                                        <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima">
+                                        <button type="submit" class="w-full bg-[#fef3c7] text-[#d97706] py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
+                                    </form>
+                                    <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-[#fee2e2] text-[#991b1b] text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        const defaultLat = -7.6298;
-        const defaultLng = 111.5240;
+        function switchView(viewName, buttonElement) {
+            document.getElementById('view-ringkasan-content').classList.add('hidden');
+            document.getElementById('view-kelola-content').classList.add('hidden');
+            
+            const navButtons = document.querySelectorAll('#sidebar-nav button');
+            navButtons.forEach(btn => {
+                btn.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white/80 hover:text-white hover:bg-white/5 border-l-4 border-transparent text-left transition-all";
+            });
 
-        const map = L.map('userMap', { zoomControl: false }).setView([defaultLat, defaultLng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        let marker = L.marker([defaultLat, defaultLng]).addTo(map);
+            buttonElement.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-amber-300 bg-white/10 border-l-4 border-amber-400 text-left transition-all shadow-inner";
 
-        function updateFormFields(lat, lng) {
-            document.getElementById('gps_koordinat').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            if (viewName === 'ringkasan') {
+                document.getElementById('view-ringkasan-content').classList.remove('hidden');
+                document.getElementById('view-title').textContent = "Ringkasan Data Laporan";
+            } else if (viewName === 'kelola') {
+                document.getElementById('view-kelola-content').classList.remove('hidden');
+                document.getElementById('view-title').textContent = "Kelola Laporan Masuk";
+                const allTabButton = document.querySelector('#tab-filter-bar button');
+                if(allTabButton) filterTableCategory('ALL', allTabButton);
+            }
         }
-        updateFormFields(defaultLat, defaultLng);
 
-        function convertDMSToDD(degrees, minutes, seconds, direction) {
-            let dd = degrees + (minutes / 60) + (seconds / 3600);
-            if (direction === "S" || direction === "W") { dd = dd * -1; }
-            return dd;
-        }
+        function filterTableCategory(targetCategory, tabButton) {
+            const tabButtons = document.querySelectorAll('#tab-filter-bar button');
+            tabButtons.forEach(btn => {
+                btn.className = "px-4 py-2 bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-semibold rounded-xl transition";
+            });
+            tabButton.className = "px-4 py-2 bg-[#4a2c1d] text-white text-xs font-bold rounded-xl shadow-sm transition";
 
-        document.getElementById('cameraField').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            const rows = document.querySelectorAll('.report-data-row');
+            let visibleRowsCount = 0;
 
-            const statusText = document.getElementById('geo_status');
-            const submitBtn = document.getElementById('submitBtn');
-
-            statusText.innerText = "⏳ Memproses & Mengompresi Foto...";
-            statusText.className = "text-[10px] text-amber-600 mt-1 font-bold animate-pulse";
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Mengompresi Gambar...";
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.src = event.target.result;
-                
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    const MAX_WIDTH = 600;
-                    const MAX_HEIGHT = 600;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
-                    document.getElementById('foto_base64').value = compressedBase64;
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "Kirim Berkas Laporan 🚀";
-                };
-            };
-            reader.readAsDataURL(file);
-
-            EXIF.getData(file, function() {
-                const latData = EXIF.getTag(this, "GPSLatitude");
-                const latRef  = EXIF.getTag(this, "GPSLatitudeRef");
-                const lngData = EXIF.getTag(this, "GPSLongitude");
-                const lngRef  = EXIF.getTag(this, "GPSLongitudeRef");
-
-                if (latData && latRef && lngData && lngRef) {
-                    const latitude = convertDMSToDD(latData[0], latData[1], latData[2], latRef);
-                    const longitude = convertDMSToDD(lngData[0], lngData[1], lngData[2], lngRef);
-
-                    const imageLocation = new L.LatLng(latitude, longitude);
-                    marker.setLatLng(imageLocation);
-                    map.setView(imageLocation, 17);
-                    updateFormFields(latitude, longitude);
-
-                    statusText.innerText = "✅ Lokasi & Ukuran Berhasil Dikompresi Otomatis!";
-                    statusText.className = "text-[10px] text-emerald-600 mt-1 font-bold";
+            rows.forEach(row => {
+                const rowCategory = row.getAttribute('data-category');
+                if (targetCategory === 'ALL' || rowCategory === targetCategory) {
+                    row.classList.remove('hidden');
+                    visibleRowsCount++;
                 } else {
-                    statusText.innerText = "⚠️ Tidak ada GPS di foto. Melacak GPS live perangkat...";
-                    
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                                const deviceLat = position.coords.latitude;
-                                const deviceLng = position.coords.longitude;
-                                const currentLoc = new L.LatLng(deviceLat, deviceLng);
-                                
-                                marker.setLatLng(currentLoc);
-                                map.setView(currentLoc, 16);
-                                updateFormFields(deviceLat, deviceLng);
-                                statusText.innerText = "📍 Menggunakan lokasi live perangkat & Foto Terkompresi!";
-                                statusText.className = "text-[10px] text-blue-600 mt-1 font-bold";
-                            },
-                            () => {
-                                statusText.innerText = "❌ Gagal melacak lokasi otomatis. Gambar terkompresi.";
-                                statusText.className = "text-[10px] text-red-500 mt-1 font-semibold";
+                    row.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('table-card-wrapper').classList.toggle('hidden', visibleRowsCount === 0);
+            document.getElementById('empty-table-placeholder').classList.toggle('hidden', visibleRowsCount > 0);
+        }
+
+        // --- Render Dynamic Donut Chart via Chart.js ---
+        <?php if(!empty($category_counts)): ?>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Transform PHP associative array to JS Key/Value arrays
+            const chartData = <?php echo json_encode($category_counts); ?>;
+            const labels = Object.keys(chartData);
+            const dataValues = Object.values(chartData);
+
+            // Palette matching the earthy tone theme color specs
+            const backgroundColors = [
+                '#78716c', // Kebersihan (Stone Gray)
+                '#ea580c', // Keamanan (Deep Orange)
+                '#eab308', // Pelayanan (Amber Gold)
+                '#d97706'  // Fasilitas (Warm Brownish Orange)
+            ];
+
+            const ctx = document.getElementById('categoryDonutChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: backgroundColors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#44403c',
+                                font: { size: 11, weight: 'bold', family: 'sans-serif' },
+                                padding: 20,
+                                boxWidth: 12
                             }
-                        );
-                    }
+                        }
+                    },
+                    cutout: '65%' // Creates the hollow inner circle shape matching the layout
                 }
             });
         });
+        <?php endif; ?>
     </script>
 </body>
 </html>
