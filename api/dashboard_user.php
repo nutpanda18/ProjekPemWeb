@@ -290,7 +290,7 @@ if ($utq) {
                         </div>
 
                         <button type="submit" id="submitBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-4 rounded-2xl transition transform active:scale-95 shadow-md shadow-amber-600/20">
-                            Kirim Berkas Laporan 🚀
+                            Kirim Berkas Laporan 
                         </button>
                     </form>
                 </div>

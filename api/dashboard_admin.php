@@ -349,7 +349,7 @@ if ($tq) {
                 '#78716c', // Kebersihan
                 '#ea580c', // Keamanan
                 '#eab308', // Pelayanan
-                '#d97706'  // Fasilitas
+                '#d97706'  // Fasilitass
             ];
 
             const ctx = document.getElementById('categoryDonutChart').getContext('2d');
