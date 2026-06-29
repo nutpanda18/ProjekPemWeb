@@ -26,10 +26,20 @@ if (!isset($_COOKIE['isLoggedIn']) || $_COOKIE['isLoggedIn'] !== 'true') {
 $currentUser = $_COOKIE['username'];
 $wisata_data = getWisataData(); 
 
+// Fetch categories dynamically from database for the selector dropdown matching your ERD
+$categories_options = mysqli_query($koneksi, "SELECT id_kategori, nama_kategori FROM kategori ORDER BY id_kategori ASC");
+
 $user_total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE nama_pelapor='$currentUser'");
 $total_data = mysqli_fetch_assoc($user_total_q)['total'] ?? 0;
 
-$reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapor='$currentUser' ORDER BY tanggal_laporan DESC");
+// Normalized JOIN Query to get the string name of the category
+$reports_query = mysqli_query($koneksi, "
+    SELECT laporan.*, kategori.nama_kategori as kategori 
+    FROM laporan 
+    LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori 
+    WHERE laporan.nama_pelapor='$currentUser' 
+    ORDER BY laporan.tanggal_laporan DESC
+");
 
 // Fetch all tanggapan for this user's reports
 $user_tanggapan = [];
@@ -79,7 +89,7 @@ if ($utq) {
     <div class="container mx-auto px-4 py-8 max-w-7xl flex-1">
         
         <div class="jumbotron-banner relative rounded-[2rem] overflow-hidden shadow-sm mb-8 h-48">
-            <img src="https://static.promediateknologi.id/crop/0x0:0x0/0x0/webp/photo/p2/220/2024/04/04/CaptureJPG-1596998515.jpg" class="w-full h-full object-cover" alt="Madiun Hero Image">
+            <img src="https://madiunkota.go.id/wp-content/uploads/2022/10/PSC-1.jpg" class="w-full h-full object-cover" alt="Madiun Hero Image">
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-8">
                 <p class="text-[10px] text-amber-300 uppercase tracking-widest font-black">Portal Layanan Pengaduan Masyarakat</p>
                 <h2 class="text-2xl font-black text-white tracking-tight mt-0.5">Selamat Datang di Pusat Layanan Keluhan Wisata</h2>
@@ -215,12 +225,20 @@ if ($utq) {
 
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Kategori Masalah</label>
-                            <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
+                            <select name="id_kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
                                 <option value="" disabled selected>-- Pilih Kategori Masalah --</option>
-                                <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
-                                <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
-                                <option value="Keamanan">Keamanan & Parkir Liar</option>
-                                <option value="Pelayanan">Pelayanan Petugas Wisata</option>
+                                 <?php if ($categories_options): ?>
+                                     <?php while($cat = mysqli_fetch_assoc($categories_options)): ?>
+                                         <option value="<?= $cat['id_kategori']; ?>">
+                                             <?= htmlspecialchars($cat['nama_kategori']); ?>
+                                         </option>
+                                     <?php endwhile; ?>
+                                 <?php else: ?>
+                                     <option value="1">Fasilitas</option>
+                                     <option value="2">Kebersihan</option>
+                                     <option value="3">Keamanan</option>
+                                     <option value="4">Pelayanan</option>
+                                 <?php endif; ?>
                             </select>
                         </div>
                         
@@ -272,7 +290,7 @@ if ($utq) {
                         </div>
 
                         <button type="submit" id="submitBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-4 rounded-2xl transition transform active:scale-95 shadow-md shadow-amber-600/20">
-                            Kirim Berkas Laporan 
+                            Kirim Berkas Laporan 🚀
                         </button>
                     </form>
                 </div>

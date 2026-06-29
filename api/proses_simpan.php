@@ -11,7 +11,7 @@ ini_set('display_errors', 1);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1. Sanitize standard inputs
     $nama_pelapor   = mysqli_real_escape_string($koneksi, $_POST['nama_pelapor'] ?? '');
-    $id_kategori    = intval($_POST['id_kategori'] ?? 0); // Step 5: capture FK integer
+    $id_kategori    = intval($_POST['id_kategori'] ?? 0); // Captures safe FK numeric ID value
     $lokasi_wisata  = mysqli_real_escape_string($koneksi, $_POST['lokasi_wisata'] ?? '');
     $isi_laporan    = $_POST['isi_laporan'] ?? '';
     $isi_laporan_esc = mysqli_real_escape_string($koneksi, $isi_laporan);
@@ -24,10 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rawBase64      = $_POST['foto_base64'] ?? '';
 
     if (!empty($rawBase64)) {
-        // CRITICAL FIX: Escape the base64 string because it contains slashes, pluses, and data URIs
         $imageBase64 = mysqli_real_escape_string($koneksi, $rawBase64);
         
-        // 3. Insert directly into TiDB cloud rows safely!
+        // 3. Insert directly into TiDB cloud matching ERD structures
         $query = "INSERT INTO laporan (nama_pelapor, id_kategori, lokasi_wisata, isi_laporan, foto, gps_koordinat, status, tanggal_laporan) 
                   VALUES ('$nama_pelapor', '$id_kategori', '$lokasi_wisata', '$isi_laporan_esc', '$imageBase64', '$gps_koordinat', '$status', '$tanggal')";
         

@@ -341,17 +341,15 @@ if ($tq) {
         // --- Render Dynamic Donut Chart via Chart.js ---
         <?php if(!empty($category_counts)): ?>
         document.addEventListener("DOMContentLoaded", function() {
-            // Transform PHP associative array to JS Key/Value arrays
             const chartData = <?php echo json_encode($category_counts); ?>;
             const labels = Object.keys(chartData);
             const dataValues = Object.values(chartData);
 
-            // Palette matching the earthy tone theme color specs
             const backgroundColors = [
-                '#78716c', // Kebersihan (Stone Gray)
-                '#ea580c', // Keamanan (Deep Orange)
-                '#eab308', // Pelayanan (Amber Gold)
-                '#d97706'  // Fasilitas (Warm Brownish Orange)
+                '#78716c', // Kebersihan
+                '#ea580c', // Keamanan
+                '#eab308', // Pelayanan
+                '#d97706'  // Fasilitas
             ];
 
             const ctx = document.getElementById('categoryDonutChart').getContext('2d');
@@ -380,7 +378,7 @@ if ($tq) {
                             }
                         }
                     },
-                    cutout: '65%' // Creates the hollow inner circle shape matching the layout
+                    cutout: '65%'
                 }
             });
         });
