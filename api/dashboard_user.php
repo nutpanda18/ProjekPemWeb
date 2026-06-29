@@ -29,17 +29,21 @@ $wisata_data = getWisataData();
 $user_total_q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM laporan WHERE nama_pelapor='$currentUser'");
 $total_data = mysqli_fetch_assoc($user_total_q)['total'] ?? 0;
 
-// Step 3: Updated Normalized Query — LEFT JOIN to fetch human-readable category name
-$reports_query = mysqli_query($koneksi, "
-    SELECT laporan.*, kategori.nama_kategori
-    FROM laporan
-    LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori
-    WHERE laporan.nama_pelapor = '$currentUser'
-    ORDER BY laporan.tanggal_laporan DESC
-");
+$reports_query = mysqli_query($koneksi, "SELECT * FROM laporan WHERE nama_pelapor='$currentUser' ORDER BY tanggal_laporan DESC");
 
-// Step 4: Fetch categories dynamically for the dropdown form
-$categories_options = mysqli_query($koneksi, "SELECT id_kategori, nama_kategori FROM kategori ORDER BY nama_kategori ASC");
+// Fetch all tanggapan for this user's reports
+$user_tanggapan = [];
+$utq = mysqli_query($koneksi, "
+    SELECT tanggapan.* FROM tanggapan
+    INNER JOIN laporan ON tanggapan.id_laporan = laporan.id_laporan
+    WHERE laporan.nama_pelapor = '$currentUser'
+    ORDER BY tanggapan.tgl_tanggapan ASC
+");
+if ($utq) {
+    while ($ut = mysqli_fetch_assoc($utq)) {
+        $user_tanggapan[$ut['id_laporan']][] = $ut;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -149,18 +153,24 @@ $categories_options = mysqli_query($koneksi, "SELECT id_kategori, nama_kategori 
                                             <td class="p-4 align-top space-y-1">
                                                 <span class="text-stone-400 text-[10px] font-medium block"><?= $r['tanggal_laporan']; ?></span>
                                                 <span class="font-black text-stone-900 text-sm block"><?= htmlspecialchars($r['lokasi_wisata'] ?? ''); ?></span>
-                                                <?php $displayKategori = $r['nama_kategori'] ?? $r['kategori'] ?? ''; ?>
-                                                <?php if(!empty($displayKategori)): ?>
-                                                    <span class="inline-block bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide border border-amber-100"><?= htmlspecialchars($displayKategori); ?></span>
+                                                <?php if(!empty($r['kategori'])): ?>
+                                                    <span class="inline-block bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide border border-amber-100"><?= htmlspecialchars($r['kategori']); ?></span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="p-4 align-top space-y-3">
                                                 <p class="text-stone-600 bg-stone-50/70 p-2.5 rounded-xl border border-stone-100 leading-relaxed italic">"<?= htmlspecialchars($r['isi_laporan'] ?? ''); ?>"</p>
-                                                
-                                                <?php if(!empty($r['tanggapan_admin'])): ?>
-                                                    <div class="bg-amber-50/60 border border-amber-200/60 p-3 rounded-xl space-y-1">
-                                                        <span class="text-[9px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">💬 Tindakan Pembenahan Admin:</span>
-                                                        <p class="text-stone-700 font-medium text-xs leading-relaxed"><?= htmlspecialchars($r['tanggapan_admin']); ?></p>
+
+                                                <?php 
+                                                $replies = $user_tanggapan[$r['id_laporan']] ?? [];
+                                                if (!empty($replies)): ?>
+                                                    <div class="space-y-2">
+                                                        <span class="text-[9px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">💬 Tanggapan Admin</span>
+                                                        <?php foreach($replies as $reply): ?>
+                                                            <div class="bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
+                                                                <p class="text-stone-700 font-medium text-xs leading-relaxed"><?= htmlspecialchars($reply['isi_tanggapan']); ?></p>
+                                                                <span class="text-[9px] text-stone-400 mt-1 block"><?= $reply['tgl_tanggapan']; ?></span>
+                                                            </div>
+                                                        <?php endforeach; ?>
                                                     </div>
                                                 <?php endif; ?>
                                             </td>
@@ -205,13 +215,12 @@ $categories_options = mysqli_query($koneksi, "SELECT id_kategori, nama_kategori 
 
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-600">Kategori Masalah</label>
-                            <select name="id_kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
+                            <select name="kategori" class="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 text-xs font-semibold focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" required>
                                 <option value="" disabled selected>-- Pilih Kategori Masalah --</option>
-                                <?php while($cat = mysqli_fetch_assoc($categories_options)): ?>
-                                    <option value="<?= $cat['id_kategori']; ?>">
-                                        <?= htmlspecialchars($cat['nama_kategori']); ?>
-                                    </option>
-                                <?php endwhile; ?>
+                                <option value="Fasilitas">Fasilitas Rusak (Bangku, Toilet, Lampu)</option>
+                                <option value="Kebersihan">Masalah Kebersihan / Sampah</option>
+                                <option value="Keamanan">Keamanan & Parkir Liar</option>
+                                <option value="Pelayanan">Pelayanan Petugas Wisata</option>
                             </select>
                         </div>
                         

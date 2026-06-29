@@ -29,9 +29,9 @@ $pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] 
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
-// Fetch total counts grouped by category (using joined name)
+// Fetch total counts grouped by category
 $category_counts = [];
-$cat_q = mysqli_query($koneksi, "SELECT kategori.nama_kategori as kategori, COUNT(*) as jumlah FROM laporan LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori WHERE kategori.nama_kategori IS NOT NULL GROUP BY kategori.nama_kategori ORDER BY jumlah DESC");
+$cat_q = mysqli_query($koneksi, "SELECT kategori, COUNT(*) as jumlah FROM laporan WHERE kategori IS NOT NULL AND kategori != '' GROUP BY kategori ORDER BY jumlah DESC");
 if ($cat_q) {
     while ($row_cat = mysqli_fetch_assoc($cat_q)) {
         $category_counts[$row_cat['kategori']] = $row_cat['jumlah'];
@@ -39,13 +39,17 @@ if ($cat_q) {
 }
 $top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
 
-// Step 3: Updated Normalized Query — LEFT JOIN to fetch human-readable category name
-$all_reports = mysqli_query($koneksi, "
-    SELECT laporan.*, kategori.nama_kategori
-    FROM laporan
-    LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori
-    ORDER BY laporan.tanggal_laporan DESC
-");
+// Fetch reports list
+$all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_wisata, kategori, gps_koordinat, isi_laporan, status, tanggal_laporan, foto FROM laporan ORDER BY tanggal_laporan DESC");
+
+// Pre-fetch all tanggapan grouped by id_laporan for efficient lookup
+$all_tanggapan = [];
+$tq = mysqli_query($koneksi, "SELECT * FROM tanggapan ORDER BY tgl_tanggapan ASC");
+if ($tq) {
+    while ($t = mysqli_fetch_assoc($tq)) {
+        $all_tanggapan[$t['id_laporan']][] = $t;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -208,8 +212,7 @@ $all_reports = mysqli_query($koneksi, "
                         </thead>
                         <tbody class="divide-y divide-orange-50 text-xs" id="reports-table-body">
                             <?php while($row = mysqli_fetch_assoc($all_reports)): 
-                                $displayKategori = $row['nama_kategori'] ?? $row['kategori'] ?? 'UMUM';
-                                $rowCatClean = strtoupper(trim($displayKategori));
+                                $rowCatClean = strtoupper(trim($row['kategori'] ?? 'UMUM'));
                             ?>
                             <tr class="hover:bg-orange-50/30 transition-colors report-data-row" data-category="<?= htmlspecialchars($rowCatClean); ?>">
                                 <td class="p-4 align-top">
@@ -228,12 +231,32 @@ $all_reports = mysqli_query($koneksi, "
                                         <span class="text-stone-500 font-semibold">Pelapor: <?= htmlspecialchars($row['nama_pelapor'] ?? ''); ?></span>
                                     </div>
                                     <div class="flex flex-wrap gap-2 items-center">
-                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide"><?= htmlspecialchars($displayKategori); ?></span>
+                                        <span class="bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wide"><?= htmlspecialchars($row['kategori'] ?? 'UMUM'); ?></span>
                                         <?php if(!empty($row['gps_koordinat'])): ?>
                                             <a href="https://www.openstreetmap.org/search?query=<?= urlencode($row['gps_koordinat']); ?>" target="_blank" class="bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded text-[9px]">🗺️ Peta</a>
                                         <?php endif; ?>
                                     </div>
                                     <p class="text-stone-600 bg-stone-50/80 p-2 rounded-xl italic">"<?= htmlspecialchars($row['isi_laporan'] ?? ''); ?>"</p>
+
+                                    <?php 
+                                    $replies = $all_tanggapan[$row['id_laporan']] ?? [];
+                                    if (!empty($replies)): ?>
+                                        <div class="space-y-1.5 mt-2">
+                                            <span class="text-[9px] font-black text-amber-800 uppercase tracking-wider">💬 Tanggapan Admin</span>
+                                            <?php foreach($replies as $reply): ?>
+                                                <div class="bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl">
+                                                    <p class="text-stone-700 text-xs leading-relaxed"><?= htmlspecialchars($reply['isi_tanggapan']); ?></p>
+                                                    <span class="text-[9px] text-stone-400 mt-1 block"><?= $reply['tgl_tanggapan']; ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <form action="/api/simpan_tanggapan.php" method="POST" class="mt-2 space-y-1.5">
+                                        <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>">
+                                        <textarea name="isi_tanggapan" rows="2" placeholder="Tulis tanggapan baru..." class="w-full px-2.5 py-2 text-xs border border-stone-200 rounded-xl bg-stone-50 outline-none focus:ring-2 focus:ring-amber-400/30 resize-none" required></textarea>
+                                        <button type="submit" class="w-full bg-amber-100 text-amber-900 py-1 rounded-lg font-black text-[9px] uppercase hover:bg-amber-200 transition">Kirim Tanggapan</button>
+                                    </form>
                                 </td>
                                 <td class="p-4 align-top text-center whitespace-nowrap">
                                     <?php 
@@ -256,8 +279,7 @@ $all_reports = mysqli_query($koneksi, "
                                         <input type="hidden" name="id_laporan" value="<?= $row['id_laporan']; ?>"><input type="hidden" name="status" value="Tidak Diterima">
                                         <button type="submit" class="w-full bg-[#fef3c7] text-[#d97706] py-1 rounded-lg font-black text-[9px] uppercase">Tolak</button>
                                     </form>
-                                    <!-- Hapus Button Preserved Here -->
-                                     <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-[#fee2e2] text-[#991b1b] text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
+                                    <a href="hapus_laporan.php?id=<?= $row['id_laporan']; ?>" onclick="return confirm('Hapus permanen data ini?')" class="w-full bg-[#fee2e2] text-[#991b1b] text-center block py-1 rounded-lg font-black text-[9px] uppercase">Hapus</a>
                                     </div>
                                 </td>
                             </tr>
