@@ -29,9 +29,9 @@ $pending_reports = (!$pending_q) ? 0 : (mysqli_fetch_assoc($pending_q)['total'] 
 
 $efficiency = ($total_reports > 0) ? ($accepted_reports / $total_reports) * 100 : 0;
 
-// Fetch total counts grouped by category
+// Fetch total counts grouped by category via JOIN
 $category_counts = [];
-$cat_q = mysqli_query($koneksi, "SELECT kategori, COUNT(*) as jumlah FROM laporan WHERE kategori IS NOT NULL AND kategori != '' GROUP BY kategori ORDER BY jumlah DESC");
+$cat_q = mysqli_query($koneksi, "SELECT kategori.nama_kategori as kategori, COUNT(*) as jumlah FROM laporan LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori WHERE kategori.nama_kategori IS NOT NULL GROUP BY kategori.nama_kategori ORDER BY jumlah DESC");
 if ($cat_q) {
     while ($row_cat = mysqli_fetch_assoc($cat_q)) {
         $category_counts[$row_cat['kategori']] = $row_cat['jumlah'];
@@ -39,8 +39,8 @@ if ($cat_q) {
 }
 $top_category = !empty($category_counts) ? array_key_first($category_counts) : 'Belum Ada';
 
-// Fetch reports list
-$all_reports = mysqli_query($koneksi, "SELECT id_laporan, nama_pelapor, lokasi_wisata, kategori, gps_koordinat, isi_laporan, status, tanggal_laporan, foto FROM laporan ORDER BY tanggal_laporan DESC");
+// Fetch reports list with kategori name via JOIN
+$all_reports = mysqli_query($koneksi, "SELECT laporan.id_laporan, laporan.nama_pelapor, laporan.lokasi_wisata, laporan.gps_koordinat, laporan.isi_laporan, laporan.status, laporan.tanggal_laporan, laporan.foto, kategori.nama_kategori as kategori FROM laporan LEFT JOIN kategori ON laporan.id_kategori = kategori.id_kategori ORDER BY laporan.tanggal_laporan DESC");
 
 // Pre-fetch all tanggapan grouped by id_laporan for efficient lookup
 $all_tanggapan = [];
