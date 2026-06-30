@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 // Aktifkan output debug yang sangat detail
-                $mail->SMTPDebug = 2;                                     // 2 = Client & Server messages
+                $mail->SMTPDebug = 0;                                     // 2 = Client & Server messages
                 $mail->Debugoutput = 'html';
 
                 $mail->isSMTP();

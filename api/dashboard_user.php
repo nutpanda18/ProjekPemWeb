@@ -89,7 +89,7 @@ if ($utq) {
     <div class="container mx-auto px-4 py-8 max-w-7xl flex-1">
         
         <div class="jumbotron-banner relative rounded-[2rem] overflow-hidden shadow-sm mb-8 h-48">
-            <img src="https://images.unsplash.com/photo-1625244724123-1f3045cbd9a0?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover" alt="Madiun Hero Image">
+            <img src="https://madiunkota.go.id/wp-content/uploads/2022/10/PSC-1.jpg" class="w-full h-full object-cover" alt="Madiun Hero Image">
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-8">
                 <p class="text-[10px] text-amber-300 uppercase tracking-widest font-black">Portal Layanan Pengaduan Masyarakat</p>
                 <h2 class="text-2xl font-black text-white tracking-tight mt-0.5">Selamat Datang di Pusat Layanan Keluhan Wisata</h2>
