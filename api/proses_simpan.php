@@ -62,12 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com';                     
                 $mail->SMTPAuth   = true;                                 
-                $mail->Username   = 'EMAIL_KAMU@gmail.com';               // GANTI dengan Gmail kamu
-                $mail->Password   = '16_DIGIT_APP_PASSWORD';              // GANTI dengan 16 digit App Password
+                $mail->Username   = 'nutpanda18@gmail.com';               // GANTI dengan Gmail kamu
+                $mail->Password   = 'bkwt rptr awpc rcsa';              // GANTI dengan 16 digit App Password
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;       
                 $mail->Port       = 587;                                  
 
-                $mail->setFrom('EMAIL_KAMU@gmail.com', 'Layanan Pengaduan Madiun');
+                $mail->setFrom('nutpanda18@gmail.com', 'Layanan Pengaduan Madiun');
                 $mail->addAddress($user_email, $nama_pelapor);            
 
                 $mail->isHTML(true);
